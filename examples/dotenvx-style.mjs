@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import linoenv from '../src/lino-env.mjs';
+import linoenv, { get, set } from '../src/lino-env.mjs';
 
 console.log('=== Dotenvx-style API Example ===\n');
 
@@ -33,14 +33,17 @@ console.log('');
 
 // Example 4: Using custom path
 console.log('4. Using custom path...');
-linoenv.set('PRODUCTION_KEY', 'prod_value', { path: 'examples/.lenv.production' });
-const prodValue = linoenv.get('PRODUCTION_KEY', { path: 'examples/.lenv.production' });
+linoenv.set('PRODUCTION_KEY', 'prod_value', {
+  path: 'examples/.lenv.production',
+});
+const prodValue = linoenv.get('PRODUCTION_KEY', {
+  path: 'examples/.lenv.production',
+});
 console.log('   PRODUCTION_KEY from .lenv.production:', prodValue);
 console.log('');
 
 // Example 5: Named exports
 console.log('5. Using named exports...');
-import { config, get, set } from '../src/lino-env.mjs';
 
 set('NAMED_EXPORT_TEST', 'works!');
 console.log('   NAMED_EXPORT_TEST:', get('NAMED_EXPORT_TEST'));
