@@ -1,3 +1,300 @@
 # lino-env
 
-A JavaScript library to operate .lenv files
+A JavaScript library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation and supports duplicate keys.
+
+## What are .lenv files?
+
+.lenv files are configuration files similar to .env files, but with a different syntax:
+
+```
+# .env format (traditional)
+GITHUB_TOKEN=gh_...
+API_KEY=abc123
+
+# .lenv format (this library)
+GITHUB_TOKEN: gh_...
+API_KEY: abc123
+```
+
+The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. Additionally, .lenv files support duplicate keys, where multiple instances of the same key can exist.
+
+## Installation
+
+```bash
+npm install lino-env
+```
+
+## Quick Start
+
+```javascript
+import { readLinoEnv, writeLinoEnv } from 'lino-env';
+
+// Write a .lenv file
+writeLinoEnv('.lenv', {
+  GITHUB_TOKEN: 'gh_...',
+  TELEGRAM_TOKEN: '054...',
+});
+
+// Read a .lenv file
+const env = readLinoEnv('.lenv');
+console.log(env.get('GITHUB_TOKEN')); // 'gh_...'
+```
+
+## API Reference
+
+### Class: LinoEnv
+
+The main class for reading and writing .lenv files.
+
+#### Constructor
+
+```javascript
+import { LinoEnv } from 'lino-env';
+
+const env = new LinoEnv('.lenv');
+```
+
+#### Methods
+
+##### `read()`
+
+Reads and parses the .lenv file. If the file doesn't exist, initializes with empty data.
+
+```javascript
+const env = new LinoEnv('.lenv');
+env.read();
+```
+
+Returns: `this` (for method chaining)
+
+##### `write()`
+
+Writes the current data back to the .lenv file.
+
+```javascript
+env.set('API_KEY', 'value').write();
+```
+
+Returns: `this` (for method chaining)
+
+##### `get(reference)`
+
+Gets the last instance of a reference (key).
+
+```javascript
+env.add('API_KEY', 'value1');
+env.add('API_KEY', 'value2');
+console.log(env.get('API_KEY')); // 'value2'
+```
+
+Returns: `string | undefined`
+
+##### `getAll(reference)`
+
+Gets all instances of a reference (key).
+
+```javascript
+env.add('API_KEY', 'value1');
+env.add('API_KEY', 'value2');
+console.log(env.getAll('API_KEY')); // ['value1', 'value2']
+```
+
+Returns: `string[]`
+
+##### `set(reference, value)`
+
+Sets a reference to a single value, replacing all existing instances.
+
+```javascript
+env.set('API_KEY', 'new_value');
+```
+
+Returns: `this` (for method chaining)
+
+##### `add(reference, value)`
+
+Adds a new instance of a reference, allowing duplicates.
+
+```javascript
+env.add('API_KEY', 'value1');
+env.add('API_KEY', 'value2'); // Now there are 2 instances
+```
+
+Returns: `this` (for method chaining)
+
+##### `has(reference)`
+
+Checks if a reference exists.
+
+```javascript
+if (env.has('API_KEY')) {
+  console.log('API_KEY exists');
+}
+```
+
+Returns: `boolean`
+
+##### `delete(reference)`
+
+Deletes all instances of a reference.
+
+```javascript
+env.delete('API_KEY');
+```
+
+Returns: `this` (for method chaining)
+
+##### `keys()`
+
+Gets all keys.
+
+```javascript
+console.log(env.keys()); // ['GITHUB_TOKEN', 'API_KEY', ...]
+```
+
+Returns: `string[]`
+
+##### `toObject()`
+
+Converts to a plain object with the last instance of each key.
+
+```javascript
+env.add('KEY1', 'value1a');
+env.add('KEY1', 'value1b');
+env.set('KEY2', 'value2');
+
+console.log(env.toObject());
+// { KEY1: 'value1b', KEY2: 'value2' }
+```
+
+Returns: `Object`
+
+### Convenience Functions
+
+#### `readLinoEnv(filePath)`
+
+Convenience function to read a .lenv file.
+
+```javascript
+import { readLinoEnv } from 'lino-env';
+
+const env = readLinoEnv('.lenv');
+console.log(env.get('GITHUB_TOKEN'));
+```
+
+Returns: `LinoEnv`
+
+#### `writeLinoEnv(filePath, data)`
+
+Convenience function to create and write a .lenv file from an object.
+
+```javascript
+import { writeLinoEnv } from 'lino-env';
+
+writeLinoEnv('.lenv', {
+  API_KEY: 'test_key',
+  SECRET: 'test_secret',
+});
+```
+
+Returns: `LinoEnv`
+
+## Usage Examples
+
+### Basic Usage
+
+```javascript
+import { LinoEnv } from 'lino-env';
+
+// Create and write
+const env = new LinoEnv('.lenv');
+env.set('GITHUB_TOKEN', 'gh_test123');
+env.set('TELEGRAM_TOKEN', '054test456');
+env.write();
+
+// Read
+const env2 = new LinoEnv('.lenv');
+env2.read();
+console.log(env2.get('GITHUB_TOKEN')); // 'gh_test123'
+```
+
+### Working with Duplicates
+
+```javascript
+import { LinoEnv } from 'lino-env';
+
+const env = new LinoEnv('.lenv');
+
+// Add multiple instances of the same key
+env.add('SERVER', 'server1.example.com');
+env.add('SERVER', 'server2.example.com');
+env.add('SERVER', 'server3.example.com');
+
+// Get the last one
+console.log(env.get('SERVER')); // 'server3.example.com'
+
+// Get all instances
+console.log(env.getAll('SERVER'));
+// ['server1.example.com', 'server2.example.com', 'server3.example.com']
+
+env.write(); // Persist to file
+```
+
+### Method Chaining
+
+```javascript
+import { LinoEnv } from 'lino-env';
+
+new LinoEnv('.lenv')
+  .set('API_KEY', 'abc123')
+  .set('SECRET', 'xyz789')
+  .write();
+```
+
+### Handling Special Characters
+
+The library correctly handles values with colons, spaces, and other special characters:
+
+```javascript
+env.set('URL', 'https://example.com:8080');
+env.set('MESSAGE', 'Hello World');
+env.write();
+
+const env2 = readLinoEnv('.lenv');
+console.log(env2.get('URL')); // 'https://example.com:8080'
+console.log(env2.get('MESSAGE')); // 'Hello World'
+```
+
+## File Format
+
+.lenv files use the following format:
+
+- Key-value separator: `: ` (colon followed by space)
+- One key-value pair per line
+- Empty lines and lines starting with `#` are ignored
+- Duplicate keys are allowed
+- Values can contain spaces, colons, and other special characters
+
+Example `.lenv` file:
+
+```
+# Configuration file
+GITHUB_TOKEN: gh_abc123xyz
+TELEGRAM_TOKEN: 054test456
+
+# Multiple servers
+SERVER: server1.example.com
+SERVER: server2.example.com
+
+# Values with special characters
+URL: https://example.com:8080
+MESSAGE: Hello World
+```
+
+## License
+
+This project is released into the public domain under [The Unlicense](http://unlicense.org).
+
+## Repository
+
+https://github.com/link-foundation/lino-env
