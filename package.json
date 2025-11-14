@@ -15,7 +15,6 @@
     "format:check": "prettier --check .",
     "check:file-size": "node scripts/check-file-size.mjs",
     "check": "npm run lint && npm run format:check && npm run check:file-size",
-    "prepare": "husky || true",
     "changeset": "changeset",
     "changeset:version": "node scripts/changeset-version.mjs",
     "changeset:publish": "changeset publish",
@@ -23,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/link-foundation/lino-env.git"
+    "url": "git+https://github.com/link-foundation/lino-env.git"
   },
   "bugs": {
     "url": "https://github.com/link-foundation/lino-env/issues"
@@ -43,6 +42,7 @@
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
     "@changesets/cli": "^2.29.7",
+    "@eslint/js": "^9.39.1",
     "babel-jest": "^29.7.0",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
