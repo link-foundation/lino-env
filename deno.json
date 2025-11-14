@@ -1,0 +1,9 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" npx jest"
+  },
+  "test": {
+    "exclude": ["examples/"]
+  }
+}

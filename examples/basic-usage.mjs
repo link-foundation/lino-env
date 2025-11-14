@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { LinoEnv, readLinoEnv, writeLinoEnv } from '../lino-env.mjs';
+import { LinoEnv, readLinoEnv, writeLinoEnv } from '../src/lino-env.mjs';
 
 console.log('=== LinoEnv Basic Usage Example ===\n');
 
@@ -49,7 +49,7 @@ console.log('5. Using convenience functions...');
 writeLinoEnv('examples/quick.lenv', {
   DATABASE_URL: 'postgresql://localhost:5432/mydb',
   REDIS_URL: 'redis://localhost:6379',
-  PORT: '3000'
+  PORT: '3000',
 });
 const quickEnv = readLinoEnv('examples/quick.lenv');
 console.log('   Environment loaded:', quickEnv.toObject());

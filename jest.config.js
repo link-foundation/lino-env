@@ -2,8 +2,8 @@ export default {
   testEnvironment: 'node',
   transform: {},
   moduleFileExtensions: ['js', 'mjs'],
-  testMatch: ['**/*.test.mjs'],
-  collectCoverageFrom: ['lino-env.mjs'],
+  testMatch: ['<rootDir>/tests/**/*.test.mjs'],
+  collectCoverageFrom: ['<rootDir>/src/**/*.mjs'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
 };

@@ -3,12 +3,23 @@
   "version": "0.1.0",
   "description": "A JavaScript library to operate .lenv files",
   "type": "module",
-  "main": "lino-env.mjs",
+  "main": "src/lino-env.mjs",
   "exports": {
-    ".": "./lino-env.mjs"
+    ".": "./src/lino-env.mjs"
   },
   "scripts": {
-    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:file-size": "node scripts/check-file-size.mjs",
+    "check": "npm run lint && npm run format:check && npm run check:file-size",
+    "prepare": "husky || true",
+    "changeset": "changeset",
+    "changeset:version": "node scripts/changeset-version.mjs",
+    "changeset:publish": "changeset publish",
+    "changeset:status": "changeset status --since=origin/main"
   },
   "repository": {
     "type": "git",
@@ -26,9 +37,25 @@
   ],
   "author": "link-foundation",
   "license": "UNLICENSED",
+  "dependencies": {
+    "links-notation": "^0.11.2"
+  },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
+    "@changesets/cli": "^2.29.7",
     "babel-jest": "^29.7.0",
-    "jest": "^29.7.0"
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

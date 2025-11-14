@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { LinoEnv, readLinoEnv, writeLinoEnv } from './lino-env.mjs';
-import { unlinkSync, existsSync } from 'fs';
+import { describe, test, expect, afterEach } from '@jest/globals';
+import { LinoEnv, readLinoEnv, writeLinoEnv } from '../src/lino-env.mjs';
+import { unlinkSync, existsSync } from 'node:fs';
 
 const TEST_FILE = '.test.lenv';
 
@@ -145,7 +145,7 @@ describe('LinoEnv', () => {
       const obj = env.toObject();
       expect(obj).toEqual({
         KEY1: 'value1b',
-        KEY2: 'value2'
+        KEY2: 'value2',
       });
     });
   });
@@ -183,7 +183,7 @@ describe('LinoEnv', () => {
     test('readLinoEnv should read and return LinoEnv instance', () => {
       writeLinoEnv(TEST_FILE, {
         GITHUB_TOKEN: 'gh_test',
-        TELEGRAM_TOKEN: '054test'
+        TELEGRAM_TOKEN: '054test',
       });
 
       const env = readLinoEnv(TEST_FILE);
@@ -194,7 +194,7 @@ describe('LinoEnv', () => {
     test('writeLinoEnv should create file with data', () => {
       writeLinoEnv(TEST_FILE, {
         API_KEY: 'test_key',
-        SECRET: 'test_secret'
+        SECRET: 'test_secret',
       });
 
       const env = readLinoEnv(TEST_FILE);

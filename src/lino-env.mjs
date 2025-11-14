@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 /**
  * LinoEnv - A library to read and write .lenv files
@@ -44,7 +44,7 @@ export class LinoEnv {
       }
 
       return this;
-    } catch (error) {
+    } catch {
       // If file doesn't exist, initialize with empty data
       this.data.clear();
       return this;
@@ -109,7 +109,7 @@ export class LinoEnv {
       }
     }
 
-    writeFileSync(this.filePath, lines.join('\n') + '\n', 'utf-8');
+    writeFileSync(this.filePath, `${lines.join('\n')}\n`, 'utf-8');
     return this;
   }
 
