@@ -49,7 +49,7 @@ console.log('5. Using convenience functions...');
 writeLinoEnv('examples/quick.lenv', {
   DATABASE_URL: 'postgresql://localhost:5432/mydb',
   REDIS_URL: 'redis://localhost:6379',
-  PORT: '3000'
+  PORT: '3000',
 });
 const quickEnv = readLinoEnv('examples/quick.lenv');
 console.log('   Environment loaded:', quickEnv.toObject());

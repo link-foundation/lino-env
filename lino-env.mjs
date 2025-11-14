@@ -44,7 +44,7 @@ export class LinoEnv {
       }
 
       return this;
-    } catch (error) {
+    } catch (_error) {
       // If file doesn't exist, initialize with empty data
       this.data.clear();
       return this;
@@ -109,7 +109,7 @@ export class LinoEnv {
       }
     }
 
-    writeFileSync(this.filePath, lines.join('\n') + '\n', 'utf-8');
+    writeFileSync(this.filePath, `${lines.join('\n')}\n`, 'utf-8');
     return this;
   }
 
