@@ -38,6 +38,7 @@ node index.js
 ```
 
 Output:
+
 ```
 Hello World
 ```
@@ -325,10 +326,7 @@ env.write(); // Persist to file
 ```javascript
 import { LinoEnv } from 'lino-env';
 
-new LinoEnv('.lenv')
-  .set('API_KEY', 'abc123')
-  .set('SECRET', 'xyz789')
-  .write();
+new LinoEnv('.lenv').set('API_KEY', 'abc123').set('SECRET', 'xyz789').write();
 ```
 
 ### Handling Special Characters

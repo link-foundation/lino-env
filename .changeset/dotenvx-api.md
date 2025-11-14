@@ -1,10 +1,11 @@
 ---
-"lino-env": minor
+'lino-env': minor
 ---
 
 Add dotenvx-like API with config(), get(), and set() functions
 
 This release adds a new dotenvx-style API that makes lino-env easier to use:
+
 - New `config()` function to load .lenv files into process.env
 - New `get()` and `set()` helper functions for easy value access
 - Default export for dotenvx-style usage: `import linoenv from 'lino-env'`
