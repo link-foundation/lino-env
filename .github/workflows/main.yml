@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  id-token: write  # Required for OIDC for NPM publishing
+  id-token: write # Required for OIDC for NPM publishing
   contents: read
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
