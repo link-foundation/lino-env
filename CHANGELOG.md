@@ -1,5 +1,11 @@
 # lino-env
 
+## 0.2.3
+
+### Patch Changes
+
+- e87a12d: Fix NPM publishing by upgrading npm CLI to support OIDC trusted publishing. This resolves authentication failures during automated releases by ensuring npm 11.5.1+ is available, which is required for OIDC-based authentication with GitHub Actions.
+
 ## 0.2.2
 
 ### Patch Changes
