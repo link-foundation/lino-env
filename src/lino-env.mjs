@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 /**
  * LinoEnv - A library to read and write .lenv files
@@ -175,3 +175,98 @@ export function writeLinoEnv(filePath, data) {
   env.write();
   return env;
 }
+
+// Default instance for dotenvx-like API
+let defaultInstance = null;
+
+/**
+ * Load .lenv file and inject into process.env
+ * Similar to dotenvx's config() method
+ * @param {Object} options - Configuration options
+ * @param {string} options.path - Path to .lenv file (default: '.lenv')
+ * @returns {Object} Parsed environment variables
+ */
+export function config(options = {}) {
+  const path = options.path || '.lenv';
+
+  if (!existsSync(path)) {
+    return { parsed: {} };
+  }
+
+  const env = readLinoEnv(path);
+  const parsed = env.toObject();
+
+  // Inject into process.env
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+
+  // Store default instance for get/set methods
+  defaultInstance = env;
+
+  return { parsed };
+}
+
+/**
+ * Get a value from the loaded .lenv file
+ * Similar to dotenvx's get() method
+ * @param {string} key - The key to retrieve
+ * @param {Object} options - Configuration options
+ * @param {string} options.path - Path to .lenv file (default: uses loaded instance or '.lenv')
+ * @returns {string|undefined} The value
+ */
+export function get(key, options = {}) {
+  if (options.path) {
+    const env = readLinoEnv(options.path);
+    return env.get(key);
+  }
+
+  // Use default instance if available, otherwise load .lenv
+  if (!defaultInstance && existsSync('.lenv')) {
+    defaultInstance = readLinoEnv('.lenv');
+  }
+
+  return defaultInstance ? defaultInstance.get(key) : process.env[key];
+}
+
+/**
+ * Set a value in a .lenv file
+ * Similar to dotenvx's set() method
+ * @param {string} key - The key to set
+ * @param {string} value - The value to set
+ * @param {Object} options - Configuration options
+ * @param {string} options.path - Path to .lenv file (default: '.lenv')
+ */
+export function set(key, value, options = {}) {
+  const path = options.path || '.lenv';
+
+  let env;
+  if (existsSync(path)) {
+    env = readLinoEnv(path);
+  } else {
+    env = new LinoEnv(path);
+  }
+
+  env.set(key, value);
+  env.write();
+
+  // Update default instance if this is the default path
+  if (path === '.lenv') {
+    defaultInstance = env;
+  }
+
+  // Update process.env
+  process.env[key] = value;
+}
+
+// Default export for dotenvx-like usage: import linoenv from 'lino-env'
+export default {
+  config,
+  get,
+  set,
+  LinoEnv,
+  readLinoEnv,
+  writeLinoEnv,
+};

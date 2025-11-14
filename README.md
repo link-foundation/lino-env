@@ -26,21 +26,102 @@ npm install lino-env
 
 ## Quick Start
 
+```bash
+# create .lenv file
+echo "HELLO: World" > .lenv
+
+# create index.js
+echo "import linoenv from 'lino-env'; linoenv.config(); console.log('Hello ' + process.env.HELLO)" > index.js
+
+# run
+node index.js
+```
+
+Output:
+
+```
+Hello World
+```
+
+## Usage
+
+### ESM (import)
+
 ```javascript
-import { readLinoEnv, writeLinoEnv } from 'lino-env';
+import linoenv from 'lino-env';
+linoenv.config();
 
-// Write a .lenv file
-writeLinoEnv('.lenv', {
-  GITHUB_TOKEN: 'gh_...',
-  TELEGRAM_TOKEN: '054...',
-});
+console.log(`Hello ${process.env.HELLO}`);
+```
 
-// Read a .lenv file
-const env = readLinoEnv('.lenv');
-console.log(env.get('GITHUB_TOKEN')); // 'gh_...'
+### CommonJS (require)
+
+```javascript
+require('lino-env').config();
+
+console.log(`Hello ${process.env.HELLO}`);
 ```
 
 ## API Reference
+
+### Dotenvx-like API
+
+These functions provide a simple API similar to dotenvx for common use cases:
+
+#### `config(options)`
+
+Load .lenv file and inject into process.env
+
+```javascript
+import linoenv from 'lino-env';
+
+linoenv.config(); // loads .lenv
+
+// or specify a custom path
+linoenv.config({ path: '.lenv.production' });
+```
+
+Returns: `{ parsed: Object }` - Object containing parsed key-value pairs
+
+#### `get(key, options)`
+
+Get a value from the loaded .lenv file
+
+```javascript
+import linoenv from 'lino-env';
+
+const value = linoenv.get('API_KEY');
+
+// or from a specific file
+const value = linoenv.get('API_KEY', { path: '.lenv.production' });
+```
+
+Returns: `string | undefined`
+
+#### `set(key, value, options)`
+
+Set a value in a .lenv file
+
+```javascript
+import linoenv from 'lino-env';
+
+linoenv.set('API_KEY', 'new_value');
+
+// or to a specific file
+linoenv.set('API_KEY', 'new_value', { path: '.lenv.production' });
+```
+
+### Named Exports
+
+You can also use named exports for tree-shaking:
+
+```javascript
+import { config, get, set } from 'lino-env';
+
+config();
+console.log(get('HELLO'));
+set('HELLO', 'Universe');
+```
 
 ### Class: LinoEnv
 
@@ -245,10 +326,7 @@ env.write(); // Persist to file
 ```javascript
 import { LinoEnv } from 'lino-env';
 
-new LinoEnv('.lenv')
-  .set('API_KEY', 'abc123')
-  .set('SECRET', 'xyz789')
-  .write();
+new LinoEnv('.lenv').set('API_KEY', 'abc123').set('SECRET', 'xyz789').write();
 ```
 
 ### Handling Special Characters
