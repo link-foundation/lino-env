@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "description": "A JavaScript library to operate .lenv files",
   "type": "module",
-  "main": "lino-env.mjs",
+  "main": "src/lino-env.mjs",
   "exports": {
-    ".": "./lino-env.mjs"
+    ".": "./src/lino-env.mjs"
   },
   "scripts": {
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",

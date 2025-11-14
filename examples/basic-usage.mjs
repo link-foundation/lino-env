@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { LinoEnv, readLinoEnv, writeLinoEnv } from '../lino-env.mjs';
+import { LinoEnv, readLinoEnv, writeLinoEnv } from '../src/lino-env.mjs';
 
 console.log('=== LinoEnv Basic Usage Example ===\n');
 

@@ -173,7 +173,7 @@ jobs:
         run: npm install
 
       - name: Verify library imports in Deno
-        run: deno eval "import('./lino-env.mjs').then(() => console.log('✓ Library compatible with Deno'))"
+        run: deno eval "import('./src/lino-env.mjs').then(() => console.log('✓ Library compatible with Deno'))"
 
       - name: Run tests (using Node.js)
         run: npm test
