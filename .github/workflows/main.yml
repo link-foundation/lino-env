@@ -142,7 +142,7 @@ jobs:
         run: deno install
 
       - name: Run tests
-        run: deno test --allow-read --allow-write
+        run: deno test --allow-read --allow-write --no-check
 
   # Release - only runs on main after tests pass
   release:

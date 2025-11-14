@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { LinoEnv, readLinoEnv, writeLinoEnv } from './lino-env.mjs';
-import { unlinkSync, existsSync } from 'fs';
+import { unlinkSync, existsSync } from 'node:fs';
 
 const TEST_FILE = '.test.lenv';
 
