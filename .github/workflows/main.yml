@@ -138,11 +138,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install dependencies
+      - name: Install npm dependencies
         run: deno install
 
       - name: Run tests
-        run: deno test --allow-read --allow-write --no-check
+        run: deno task test
 
   # Release - only runs on main after tests pass
   release:
