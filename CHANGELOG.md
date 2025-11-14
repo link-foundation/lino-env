@@ -1,5 +1,11 @@
 # lino-env
 
+## 0.2.2
+
+### Patch Changes
+
+- 7bfef0d: Manual patch release
+
 ## 0.2.1
 
 ### Patch Changes
