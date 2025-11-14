@@ -44,7 +44,7 @@ export class LinoEnv {
       }
 
       return this;
-    } catch (_error) {
+    } catch {
       // If file doesn't exist, initialize with empty data
       this.data.clear();
       return this;
