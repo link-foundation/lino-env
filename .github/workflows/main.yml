@@ -131,8 +131,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
-        run: npm test
+      - name: Run tests with Node.js
+        run: node --test
 
   # Test on Bun - runs after changeset check on PRs, immediately on main
   test-bun:
@@ -163,24 +163,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
-      - name: Install dependencies
-        run: npm install
-
       - name: Verify library imports in Deno
         run: deno eval "import('./src/lino-env.mjs').then(() => console.log('✓ Library compatible with Deno'))"
 
-      - name: Run tests (using Node.js)
-        run: npm test
+      - name: Run tests with Deno
+        run: deno test --allow-read --allow-write
 
   # Release - only runs on main after tests pass
   release:
