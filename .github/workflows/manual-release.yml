@@ -18,15 +18,15 @@ on:
 
 jobs:
   create-changeset:
-    name: Create Changeset
+    name: Create Changeset and Commit to Main
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -71,30 +71,26 @@ jobs:
 
           echo "Formatted changeset files"
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: add changeset for manual ${{ github.event.inputs.bump_type }} release'
-          branch: changeset-manual-release-${{ github.run_id }}
-          delete-branch: true
-          title: 'chore: manual ${{ github.event.inputs.bump_type }} release'
-          body: |
-            ## Manual Release Request
+      - name: Commit and push to main
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-            This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** release.
+          # Add changeset file
+          git add .changeset/
 
-            ### Release Details
-            - **Type:** ${{ github.event.inputs.bump_type }}
-            - **Description:** ${{ github.event.inputs.description || 'Manual release' }}
-            - **Triggered by:** @${{ github.actor }}
+          # Commit with descriptive message
+          git commit -m "chore: add changeset for manual ${{ github.event.inputs.bump_type }} release" \
+                     -m "" \
+                     -m "Release type: ${{ github.event.inputs.bump_type }}" \
+                     -m "Description: ${{ github.event.inputs.description || 'Manual release' }}" \
+                     -m "Triggered by: @${{ github.actor }}" \
+                     -m "" \
+                     -m "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 
-            ### Next Steps
-            1. Review the changeset in this PR
-            2. Merge this PR to main
-            3. The automated release workflow will create a version PR
-            4. Merge the version PR to publish to NPM and create a GitHub release
+          # Push directly to main
+          git push origin main
 
-            ---
-
-            🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          echo "✅ Changeset committed and pushed to main"
+          echo "The automated release workflow will now process this changeset."
