@@ -1,5 +1,11 @@
 # lino-env
 
+## 0.2.7
+
+### Patch Changes
+
+- 0dd67d6: Test manual release
+
 ## 0.2.6
 
 ### Patch Changes
