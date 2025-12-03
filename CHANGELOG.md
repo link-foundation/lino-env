@@ -1,5 +1,11 @@
 # lino-env
 
+## 0.2.8
+
+### Patch Changes
+
+- c5874d5: Test patch release
+
 ## 0.2.7
 
 ### Patch Changes
