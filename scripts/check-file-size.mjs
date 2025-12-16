@@ -9,15 +9,15 @@ import { readdir, readFile } from 'fs/promises';
 import { join, relative } from 'path';
 
 const MAX_LINES = 1000;
-const FILE_EXTENSIONS = ['.js', '.mjs', '.cjs', '.md'];
+const FILE_EXTENSIONS = ['.js', '.mjs', '.cjs'];
 
 /**
- * Recursively find all files matching extensions in a directory
+ * Recursively find all JavaScript files in a directory
  * @param {string} dir - Directory to search
  * @param {string[]} filesToExclude - Patterns to exclude
  * @returns {Promise<string[]>} Array of file paths
  */
-async function findFiles(dir, filesToExclude = []) {
+async function findJavaScriptFiles(dir, filesToExclude = []) {
   const files = [];
   const entries = await readdir(dir, { withFileTypes: true });
 
@@ -35,7 +35,7 @@ async function findFiles(dir, filesToExclude = []) {
     }
 
     if (entry.isDirectory()) {
-      files.push(...(await findFiles(fullPath, filesToExclude)));
+      files.push(...(await findJavaScriptFiles(fullPath, filesToExclude)));
     } else if (FILE_EXTENSIONS.some((ext) => entry.name.endsWith(ext))) {
       files.push(fullPath);
     }
@@ -60,9 +60,11 @@ async function countLines(filePath) {
 async function main() {
   const excludePatterns = ['node_modules', 'coverage', 'dist', '.git', 'build'];
 
-  console.log(`\nChecking files for maximum ${MAX_LINES} lines...\n`);
+  console.log(
+    `\nChecking JavaScript files for maximum ${MAX_LINES} lines...\n`
+  );
 
-  const files = await findFiles(process.cwd(), excludePatterns);
+  const files = await findJavaScriptFiles(process.cwd(), excludePatterns);
   const violations = [];
 
   for (const file of files) {
@@ -94,5 +96,8 @@ async function main() {
 
 main().catch((error) => {
   console.error('Error:', error.message);
+  if (process.env.DEBUG) {
+    console.error('Stack trace:', error.stack);
+  }
   process.exit(1);
 });
