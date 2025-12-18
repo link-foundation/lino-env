@@ -20,6 +20,8 @@ export default [
         Buffer: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
+        // Node.js 18+ globals
+        fetch: 'readonly',
         // Runtime-specific globals
         Bun: 'readonly',
         Deno: 'readonly',
@@ -30,7 +32,14 @@ export default [
       'prettier/prettier': 'error',
 
       // Code quality rules
-      'no-unused-vars': 'error',
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'no-console': 'off', // Allow console in this project
       'no-debugger': 'error',
 
@@ -53,6 +62,13 @@ export default [
 
       // Comments and documentation
       'spaced-comment': ['error', 'always', { markers: ['/'] }],
+    },
+  },
+  {
+    // Test files have different requirements
+    files: ['tests/**/*.js', '**/*.test.js'],
+    rules: {
+      'require-await': 'off', // Async functions without await are common in tests
     },
   },
   {
