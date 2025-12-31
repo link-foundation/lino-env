@@ -1,14 +1,19 @@
-name: Checks and release
+name: JS Checks and Release
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'js/**'
+      - 'scripts/detect-code-changes.mjs'
+      - '.github/workflows/js.yml'
   pull_request:
     types: [opened, synchronize, reopened]
-  # Manual release support - consolidated here to work with npm trusted publishing
-  # npm only allows ONE workflow file as trusted publisher, so all publishing
-  # must go through this workflow (release.yml)
+    paths:
+      - 'js/**'
+      - 'scripts/detect-code-changes.mjs'
+      - '.github/workflows/js.yml'
   workflow_dispatch:
     inputs:
       release_mode:
@@ -34,12 +39,43 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+defaults:
+  run:
+    working-directory: js
+
 jobs:
-  # Changeset check - only runs on PRs
+  # === DETECT CHANGES - determines which jobs should run ===
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
+    outputs:
+      mjs-changed: ${{ steps.changes.outputs.mjs-changed }}
+      js-changed: ${{ steps.changes.outputs.js-changed }}
+      package-changed: ${{ steps.changes.outputs.package-changed }}
+      docs-changed: ${{ steps.changes.outputs.docs-changed }}
+      workflow-changed: ${{ steps.changes.outputs.workflow-changed }}
+      any-code-changed: ${{ steps.changes.outputs.any-code-changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        working-directory: .
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/detect-code-changes.mjs --lang js
+
+  # === CHANGESET CHECK - only runs on PRs with code changes ===
   changeset-check:
     name: Check for Changesets
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    needs: [detect-changes]
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +90,10 @@ jobs:
         run: npm install
 
       - name: Check for changesets
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Skip changeset check for automated version PRs
           if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
@@ -64,12 +104,18 @@ jobs:
           # Run changeset validation script
           node scripts/validate-changeset.mjs
 
-  # Linting and formatting - runs after changeset check on PRs, immediately on main
+  # === LINT AND FORMAT CHECK ===
   lint:
     name: Lint and Format Check
     runs-on: ubuntu-latest
-    needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    needs: [detect-changes]
+    if: |
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.mjs-changed == 'true' ||
+      needs.detect-changes.outputs.js-changed == 'true' ||
+      needs.detect-changes.outputs.docs-changed == 'true' ||
+      needs.detect-changes.outputs.package-changed == 'true' ||
+      needs.detect-changes.outputs.workflow-changed == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -94,8 +140,8 @@ jobs:
   test:
     name: Test (${{ matrix.runtime }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    needs: [detect-changes, changeset-check]
+    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -146,11 +192,8 @@ jobs:
   release:
     name: Release
     needs: [lint, test]
-    # Use always() to ensure this job runs even if changeset-check was skipped
-    # This is needed because lint/test jobs have a transitive dependency on changeset-check
     if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
     runs-on: ubuntu-latest
-    # Permissions required for npm OIDC trusted publishing
     permissions:
       contents: write
       pull-requests: write
@@ -186,7 +229,6 @@ jobs:
         run: node scripts/version-and-commit.mjs --mode changeset
 
       - name: Publish to npm
-        # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
         run: node scripts/publish-to-npm.mjs --should-pull
@@ -203,14 +245,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
 
-  # Manual Instant Release - triggered via workflow_dispatch with instant mode
-  # This job is in release.yml because npm trusted publishing
-  # only allows one workflow file to be registered as a trusted publisher
+  # Manual Instant Release
   instant-release:
     name: Instant Release
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
     runs-on: ubuntu-latest
-    # Permissions required for npm OIDC trusted publishing
     permissions:
       contents: write
       pull-requests: write
@@ -237,7 +276,6 @@ jobs:
         run: node scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
 
       - name: Publish to npm
-        # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
         run: node scripts/publish-to-npm.mjs
@@ -254,7 +292,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
 
-  # Manual Changeset PR - creates a pull request with the changeset for review
+  # Manual Changeset PR
   changeset-pr:
     name: Create Changeset PR
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
@@ -280,23 +318,21 @@ jobs:
 
       - name: Format changeset with Prettier
         run: |
-          # Run Prettier on the changeset file to ensure it matches project style
           npx prettier --write ".changeset/*.md" || true
-
           echo "Formatted changeset files"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: add changeset for manual ${{ github.event.inputs.bump_type }} release'
-          branch: changeset-manual-release-${{ github.run_id }}
+          commit-message: 'chore(js): add changeset for manual ${{ github.event.inputs.bump_type }} release'
+          branch: changeset-manual-js-release-${{ github.run_id }}
           delete-branch: true
-          title: 'chore: manual ${{ github.event.inputs.bump_type }} release'
+          title: 'chore(js): manual ${{ github.event.inputs.bump_type }} release'
           body: |
-            ## Manual Release Request
+            ## Manual Release Request (JavaScript)
 
-            This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** release.
+            This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** release for the JavaScript package.
 
             ### Release Details
             - **Type:** ${{ github.event.inputs.bump_type }}
@@ -306,5 +342,4 @@ jobs:
             ### Next Steps
             1. Review the changeset in this PR
             2. Merge this PR to main
-            3. The automated release workflow will create a version PR
-            4. Merge the version PR to publish to npm and create a GitHub release
+            3. The automated release workflow will publish to npm and create a GitHub release
