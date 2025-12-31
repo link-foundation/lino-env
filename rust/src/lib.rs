@@ -1,4 +1,4 @@
-//! LinoEnv - A Rust library to read and write .lenv files.
+//! `LinoEnv` - A Rust library to read and write `.lenv` files.
 //!
 //! `.lenv` files use `: ` instead of `=` for key-value separation.
 //! Example: `GITHUB_TOKEN: gh_....`
@@ -11,7 +11,7 @@ use std::path::Path;
 /// Package version (matches Cargo.toml version).
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// LinoEnv - A struct to read and write .lenv files.
+/// `LinoEnv` - A struct to read and write `.lenv` files.
 ///
 /// `.lenv` files use `: ` instead of `=` for key-value separation.
 ///
@@ -44,7 +44,7 @@ pub struct LinoEnv {
 }
 
 impl LinoEnv {
-    /// Create a new LinoEnv instance.
+    /// Create a new `LinoEnv` instance.
     ///
     /// # Arguments
     ///
@@ -311,11 +311,11 @@ impl LinoEnv {
         self.data.keys().cloned().collect()
     }
 
-    /// Get all entries as a HashMap (with last instance of each key).
+    /// Get all entries as a `HashMap` (with last instance of each key).
     ///
     /// # Returns
     ///
-    /// A HashMap with each key mapped to its last value.
+    /// A `HashMap` with each key mapped to its last value.
     ///
     /// # Examples
     ///
@@ -389,6 +389,7 @@ pub fn read_lino_env<P: AsRef<str>>(file_path: P) -> io::Result<LinoEnv> {
 /// // Clean up
 /// fs::remove_file(path).ok();
 /// ```
+#[allow(clippy::implicit_hasher)]
 pub fn write_lino_env<P: AsRef<str>>(
     file_path: P,
     data: &HashMap<String, String>,
