@@ -22,7 +22,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// use std::fs;
 ///
 /// // Create a temporary file for testing
-/// let path = "/tmp/test_lino_env_example.lenv";
+/// let path = std::env::temp_dir().join("test_lino_env_example.lenv");
+/// let path = path.to_str().unwrap();
 ///
 /// let mut env = LinoEnv::new(path);
 /// env.set("GITHUB_TOKEN", "gh_test123");
@@ -223,7 +224,8 @@ impl LinoEnv {
     /// use lino_env::LinoEnv;
     /// use std::fs;
     ///
-    /// let path = "/tmp/test_lino_env_write.lenv";
+    /// let path = std::env::temp_dir().join("test_lino_env_write.lenv");
+    /// let path = path.to_str().unwrap();
     /// let mut env = LinoEnv::new(path);
     /// env.set("KEY", "value");
     /// env.write().unwrap();
@@ -381,7 +383,8 @@ pub fn read_lino_env<P: AsRef<str>>(file_path: P) -> io::Result<LinoEnv> {
 /// use std::collections::HashMap;
 /// use std::fs;
 ///
-/// let path = "/tmp/test_write_lino_env.lenv";
+/// let path = std::env::temp_dir().join("test_write_lino_env.lenv");
+/// let path = path.to_str().unwrap();
 /// let mut data = HashMap::new();
 /// data.insert("KEY".to_string(), "value".to_string());
 /// write_lino_env(path, &data).unwrap();
@@ -413,7 +416,7 @@ mod tests {
 
     fn test_file(name: &str) -> String {
         std::env::temp_dir()
-            .join(format!("lino_env_test_{}.lenv", name))
+            .join(format!("lino_env_test_{name}.lenv"))
             .to_string_lossy()
             .to_string()
     }
