@@ -133,7 +133,9 @@ impl LinoEnv {
     /// ```
     #[must_use]
     pub fn get(&self, reference: &str) -> Option<String> {
-        self.data.get(reference).and_then(|values| values.last().cloned())
+        self.data
+            .get(reference)
+            .and_then(|values| values.last().cloned())
     }
 
     /// Get all instances of a reference (key).
@@ -180,7 +182,8 @@ impl LinoEnv {
     /// assert_eq!(env.get_all("KEY"), vec!["new_value"]);
     /// ```
     pub fn set(&mut self, reference: &str, value: &str) -> &mut Self {
-        self.data.insert(reference.to_string(), vec![value.to_string()]);
+        self.data
+            .insert(reference.to_string(), vec![value.to_string()]);
         self
     }
 
@@ -407,62 +410,69 @@ mod tests {
         fs::remove_file(path).ok();
     }
 
+    fn test_file(name: &str) -> String {
+        std::env::temp_dir()
+            .join(format!("lino_env_test_{}.lenv", name))
+            .to_string_lossy()
+            .to_string()
+    }
+
     mod basic_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_basic.lenv";
-
         #[test]
         fn test_create_and_write() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("basic_create_write");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.set("GITHUB_TOKEN", "gh_test123");
             env.set("TELEGRAM_TOKEN", "054test456");
             env.write().unwrap();
 
-            assert!(Path::new(TEST_FILE).exists());
-            cleanup(TEST_FILE);
+            assert!(Path::new(&test_file).exists());
+            cleanup(&test_file);
         }
 
         #[test]
         fn test_read() {
-            cleanup(TEST_FILE);
+            let test_file = test_file("basic_read");
+            cleanup(&test_file);
             // First create a file
-            let mut env1 = LinoEnv::new(TEST_FILE);
+            let mut env1 = LinoEnv::new(&test_file);
             env1.set("GITHUB_TOKEN", "gh_test123");
             env1.set("TELEGRAM_TOKEN", "054test456");
             env1.write().unwrap();
 
             // Then read it
-            let mut env2 = LinoEnv::new(TEST_FILE);
+            let mut env2 = LinoEnv::new(&test_file);
             env2.read().unwrap();
 
             assert_eq!(env2.get("GITHUB_TOKEN"), Some("gh_test123".to_string()));
             assert_eq!(env2.get("TELEGRAM_TOKEN"), Some("054test456".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod get_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_get.lenv";
-
         #[test]
         fn test_get_last_instance() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("get_last_instance");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("API_KEY", "value1");
             env.add("API_KEY", "value2");
             env.add("API_KEY", "value3");
 
             assert_eq!(env.get("API_KEY"), Some("value3".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
 
         #[test]
         fn test_get_nonexistent() {
-            let env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("get_nonexistent");
+            let env = LinoEnv::new(&test_file);
             assert_eq!(env.get("NON_EXISTENT"), None);
         }
     }
@@ -470,26 +480,23 @@ mod tests {
     mod get_all_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_get_all.lenv";
-
         #[test]
         fn test_get_all_instances() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("get_all_instances");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("API_KEY", "value1");
             env.add("API_KEY", "value2");
             env.add("API_KEY", "value3");
 
-            assert_eq!(
-                env.get_all("API_KEY"),
-                vec!["value1", "value2", "value3"]
-            );
-            cleanup(TEST_FILE);
+            assert_eq!(env.get_all("API_KEY"), vec!["value1", "value2", "value3"]);
+            cleanup(&test_file);
         }
 
         #[test]
         fn test_get_all_nonexistent() {
-            let env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("get_all_nonexistent");
+            let env = LinoEnv::new(&test_file);
             assert!(env.get_all("NON_EXISTENT").is_empty());
         }
     }
@@ -497,58 +504,56 @@ mod tests {
     mod set_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_set.lenv";
-
         #[test]
         fn test_set_replaces_all() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("set_replaces_all");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("API_KEY", "value1");
             env.add("API_KEY", "value2");
             env.set("API_KEY", "new_value");
 
             assert_eq!(env.get("API_KEY"), Some("new_value".to_string()));
             assert_eq!(env.get_all("API_KEY"), vec!["new_value"]);
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod add_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_add.lenv";
-
         #[test]
         fn test_add_duplicates() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("add_duplicates");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("KEY", "value1");
             env.add("KEY", "value2");
             env.add("KEY", "value3");
 
             assert_eq!(env.get_all("KEY"), vec!["value1", "value2", "value3"]);
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod has_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_has.lenv";
-
         #[test]
         fn test_has_existing() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("has_existing");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.set("KEY", "value");
 
             assert!(env.has("KEY"));
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
 
         #[test]
         fn test_has_nonexistent() {
-            let env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("has_nonexistent");
+            let env = LinoEnv::new(&test_file);
             assert!(!env.has("NON_EXISTENT"));
         }
     }
@@ -556,31 +561,29 @@ mod tests {
     mod delete_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_delete.lenv";
-
         #[test]
         fn test_delete_all_instances() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("delete_all_instances");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("KEY", "value1");
             env.add("KEY", "value2");
             env.delete("KEY");
 
             assert!(!env.has("KEY"));
             assert_eq!(env.get("KEY"), None);
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod keys_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_keys.lenv";
-
         #[test]
         fn test_keys() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("keys");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.set("KEY1", "value1");
             env.set("KEY2", "value2");
             env.set("KEY3", "value3");
@@ -590,19 +593,18 @@ mod tests {
             assert!(keys.contains(&"KEY2".to_string()));
             assert!(keys.contains(&"KEY3".to_string()));
             assert_eq!(keys.len(), 3);
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod to_hash_map_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_hash_map.lenv";
-
         #[test]
         fn test_to_hash_map() {
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("to_hash_map");
+            cleanup(&test_file);
+            let mut env = LinoEnv::new(&test_file);
             env.add("KEY1", "value1a");
             env.add("KEY1", "value1b");
             env.set("KEY2", "value2");
@@ -610,30 +612,29 @@ mod tests {
             let obj = env.to_hash_map();
             assert_eq!(obj.get("KEY1"), Some(&"value1b".to_string()));
             assert_eq!(obj.get("KEY2"), Some(&"value2".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
     mod persistence_tests {
         use super::*;
 
-        const TEST_FILE: &str = "/tmp/test_lino_env_persistence.lenv";
-
         #[test]
         fn test_persist_duplicates() {
-            cleanup(TEST_FILE);
-            let mut env1 = LinoEnv::new(TEST_FILE);
+            let test_file = test_file("persist_duplicates");
+            cleanup(&test_file);
+            let mut env1 = LinoEnv::new(&test_file);
             env1.add("KEY", "value1");
             env1.add("KEY", "value2");
             env1.add("KEY", "value3");
             env1.write().unwrap();
 
-            let mut env2 = LinoEnv::new(TEST_FILE);
+            let mut env2 = LinoEnv::new(&test_file);
             env2.read().unwrap();
 
             assert_eq!(env2.get_all("KEY"), vec!["value1", "value2", "value3"]);
             assert_eq!(env2.get("KEY"), Some("value3".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file);
         }
     }
 
@@ -642,32 +643,32 @@ mod tests {
 
         #[test]
         fn test_read_lino_env() {
-            const TEST_FILE: &str = "/tmp/test_lino_env_convenience_read.lenv";
-            cleanup(TEST_FILE);
+            let test_file_path = test_file("convenience_read");
+            cleanup(&test_file_path);
             let mut data = HashMap::new();
             data.insert("GITHUB_TOKEN".to_string(), "gh_test".to_string());
             data.insert("TELEGRAM_TOKEN".to_string(), "054test".to_string());
-            write_lino_env(TEST_FILE, &data).unwrap();
+            write_lino_env(&test_file_path, &data).unwrap();
 
-            let env = read_lino_env(TEST_FILE).unwrap();
+            let env = read_lino_env(&test_file_path).unwrap();
             assert_eq!(env.get("GITHUB_TOKEN"), Some("gh_test".to_string()));
             assert_eq!(env.get("TELEGRAM_TOKEN"), Some("054test".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file_path);
         }
 
         #[test]
         fn test_write_lino_env() {
-            const TEST_FILE: &str = "/tmp/test_lino_env_convenience_write.lenv";
-            cleanup(TEST_FILE);
+            let test_file_path = test_file("convenience_write");
+            cleanup(&test_file_path);
             let mut data = HashMap::new();
             data.insert("API_KEY".to_string(), "test_key".to_string());
             data.insert("SECRET".to_string(), "test_secret".to_string());
-            write_lino_env(TEST_FILE, &data).unwrap();
+            write_lino_env(&test_file_path, &data).unwrap();
 
-            let env = read_lino_env(TEST_FILE).unwrap();
+            let env = read_lino_env(&test_file_path).unwrap();
             assert_eq!(env.get("API_KEY"), Some("test_key".to_string()));
             assert_eq!(env.get("SECRET"), Some("test_secret".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file_path);
         }
     }
 
@@ -676,30 +677,33 @@ mod tests {
 
         #[test]
         fn test_values_with_colons() {
-            const TEST_FILE: &str = "/tmp/test_lino_env_format_colons.lenv";
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file_path = test_file("format_colons");
+            cleanup(&test_file_path);
+            let mut env = LinoEnv::new(&test_file_path);
             env.set("URL", "https://example.com:8080");
             env.write().unwrap();
 
-            let mut env2 = LinoEnv::new(TEST_FILE);
+            let mut env2 = LinoEnv::new(&test_file_path);
             env2.read().unwrap();
-            assert_eq!(env2.get("URL"), Some("https://example.com:8080".to_string()));
-            cleanup(TEST_FILE);
+            assert_eq!(
+                env2.get("URL"),
+                Some("https://example.com:8080".to_string())
+            );
+            cleanup(&test_file_path);
         }
 
         #[test]
         fn test_values_with_spaces() {
-            const TEST_FILE: &str = "/tmp/test_lino_env_format_spaces.lenv";
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file_path = test_file("format_spaces");
+            cleanup(&test_file_path);
+            let mut env = LinoEnv::new(&test_file_path);
             env.set("MESSAGE", "Hello World");
             env.write().unwrap();
 
-            let mut env2 = LinoEnv::new(TEST_FILE);
+            let mut env2 = LinoEnv::new(&test_file_path);
             env2.read().unwrap();
             assert_eq!(env2.get("MESSAGE"), Some("Hello World".to_string()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file_path);
         }
     }
 
@@ -708,7 +712,9 @@ mod tests {
 
         #[test]
         fn test_nonexistent_file() {
-            let mut env = LinoEnv::new("/tmp/nonexistent_lino_env_file.lenv");
+            let test_file_path = test_file("nonexistent");
+            cleanup(&test_file_path);
+            let mut env = LinoEnv::new(&test_file_path);
             env.read().unwrap();
 
             assert_eq!(env.get("ANY_KEY"), None);
@@ -717,16 +723,16 @@ mod tests {
 
         #[test]
         fn test_empty_values() {
-            const TEST_FILE: &str = "/tmp/test_lino_env_empty.lenv";
-            cleanup(TEST_FILE);
-            let mut env = LinoEnv::new(TEST_FILE);
+            let test_file_path = test_file("empty_values");
+            cleanup(&test_file_path);
+            let mut env = LinoEnv::new(&test_file_path);
             env.set("EMPTY_KEY", "");
             env.write().unwrap();
 
-            let mut env2 = LinoEnv::new(TEST_FILE);
+            let mut env2 = LinoEnv::new(&test_file_path);
             env2.read().unwrap();
             assert_eq!(env2.get("EMPTY_KEY"), Some(String::new()));
-            cleanup(TEST_FILE);
+            cleanup(&test_file_path);
         }
     }
 }
