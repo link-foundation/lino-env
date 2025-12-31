@@ -1,6 +1,6 @@
 {
   "name": "lino-env",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "A JavaScript library to operate .lenv files",
   "type": "module",
   "main": "src/lino-env.mjs",
