@@ -1,6 +1,8 @@
 # lino-env
 
-A JavaScript library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation and supports duplicate keys.
+A library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation and supports duplicate keys.
+
+**Available in both JavaScript and Rust!**
 
 ## What are .lenv files?
 
@@ -18,13 +20,22 @@ API_KEY: abc123
 
 The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. Additionally, .lenv files support duplicate keys, where multiple instances of the same key can exist.
 
-## Installation
+## Packages
+
+| Package            | Language   | Directory | Status                                                                                  |
+| ------------------ | ---------- | --------- | --------------------------------------------------------------------------------------- |
+| [lino-env](./js)   | JavaScript | `./js`    | [![npm](https://img.shields.io/npm/v/lino-env)](https://www.npmjs.com/package/lino-env) |
+| [lino-env](./rust) | Rust       | `./rust`  | Coming soon                                                                             |
+
+## JavaScript Package
+
+### Installation
 
 ```bash
 npm install lino-env
 ```
 
-## Quick Start
+### Quick Start
 
 ```bash
 # create .lenv file
@@ -43,9 +54,7 @@ Output:
 Hello World
 ```
 
-## Usage
-
-### ESM (import)
+### Usage
 
 ```javascript
 import linoenv from 'lino-env';
@@ -54,294 +63,41 @@ linoenv.config();
 console.log(`Hello ${process.env.HELLO}`);
 ```
 
-### CommonJS (require)
+For full API documentation, see the [JavaScript README](./js/README.md) (coming soon) or the source code.
 
-```javascript
-require('lino-env').config();
+## Rust Package
 
-console.log(`Hello ${process.env.HELLO}`);
+### Installation
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+lino-env = "0.1"
 ```
 
-## API Reference
+### Quick Start
 
-### Dotenvx-like API
+```rust
+use lino_env::LinoEnv;
 
-These functions provide a simple API similar to dotenvx for common use cases:
+// Create and write a new .lenv file
+let mut env = LinoEnv::new(".lenv");
+env.set("GITHUB_TOKEN", "gh_abc123");
+env.set("API_KEY", "my_api_key");
+env.write().unwrap();
 
-#### `config(options)`
+// Read an existing .lenv file
+let mut env = LinoEnv::new(".lenv");
+env.read().unwrap();
 
-Load .lenv file and inject into process.env
-
-```javascript
-import linoenv from 'lino-env';
-
-linoenv.config(); // loads .lenv
-
-// or specify a custom path
-linoenv.config({ path: '.lenv.production' });
-```
-
-Returns: `{ parsed: Object }` - Object containing parsed key-value pairs
-
-#### `get(key, options)`
-
-Get a value from the loaded .lenv file
-
-```javascript
-import linoenv from 'lino-env';
-
-const value = linoenv.get('API_KEY');
-
-// or from a specific file
-const value = linoenv.get('API_KEY', { path: '.lenv.production' });
-```
-
-Returns: `string | undefined`
-
-#### `set(key, value, options)`
-
-Set a value in a .lenv file
-
-```javascript
-import linoenv from 'lino-env';
-
-linoenv.set('API_KEY', 'new_value');
-
-// or to a specific file
-linoenv.set('API_KEY', 'new_value', { path: '.lenv.production' });
-```
-
-### Named Exports
-
-You can also use named exports for tree-shaking:
-
-```javascript
-import { config, get, set } from 'lino-env';
-
-config();
-console.log(get('HELLO'));
-set('HELLO', 'Universe');
-```
-
-### Class: LinoEnv
-
-The main class for reading and writing .lenv files.
-
-#### Constructor
-
-```javascript
-import { LinoEnv } from 'lino-env';
-
-const env = new LinoEnv('.lenv');
-```
-
-#### Methods
-
-##### `read()`
-
-Reads and parses the .lenv file. If the file doesn't exist, initializes with empty data.
-
-```javascript
-const env = new LinoEnv('.lenv');
-env.read();
-```
-
-Returns: `this` (for method chaining)
-
-##### `write()`
-
-Writes the current data back to the .lenv file.
-
-```javascript
-env.set('API_KEY', 'value').write();
-```
-
-Returns: `this` (for method chaining)
-
-##### `get(reference)`
-
-Gets the last instance of a reference (key).
-
-```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2');
-console.log(env.get('API_KEY')); // 'value2'
-```
-
-Returns: `string | undefined`
-
-##### `getAll(reference)`
-
-Gets all instances of a reference (key).
-
-```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2');
-console.log(env.getAll('API_KEY')); // ['value1', 'value2']
-```
-
-Returns: `string[]`
-
-##### `set(reference, value)`
-
-Sets a reference to a single value, replacing all existing instances.
-
-```javascript
-env.set('API_KEY', 'new_value');
-```
-
-Returns: `this` (for method chaining)
-
-##### `add(reference, value)`
-
-Adds a new instance of a reference, allowing duplicates.
-
-```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2'); // Now there are 2 instances
-```
-
-Returns: `this` (for method chaining)
-
-##### `has(reference)`
-
-Checks if a reference exists.
-
-```javascript
-if (env.has('API_KEY')) {
-  console.log('API_KEY exists');
+// Get a value
+if let Some(token) = env.get("GITHUB_TOKEN") {
+    println!("Token: {}", token);
 }
 ```
 
-Returns: `boolean`
-
-##### `delete(reference)`
-
-Deletes all instances of a reference.
-
-```javascript
-env.delete('API_KEY');
-```
-
-Returns: `this` (for method chaining)
-
-##### `keys()`
-
-Gets all keys.
-
-```javascript
-console.log(env.keys()); // ['GITHUB_TOKEN', 'API_KEY', ...]
-```
-
-Returns: `string[]`
-
-##### `toObject()`
-
-Converts to a plain object with the last instance of each key.
-
-```javascript
-env.add('KEY1', 'value1a');
-env.add('KEY1', 'value1b');
-env.set('KEY2', 'value2');
-
-console.log(env.toObject());
-// { KEY1: 'value1b', KEY2: 'value2' }
-```
-
-Returns: `Object`
-
-### Convenience Functions
-
-#### `readLinoEnv(filePath)`
-
-Convenience function to read a .lenv file.
-
-```javascript
-import { readLinoEnv } from 'lino-env';
-
-const env = readLinoEnv('.lenv');
-console.log(env.get('GITHUB_TOKEN'));
-```
-
-Returns: `LinoEnv`
-
-#### `writeLinoEnv(filePath, data)`
-
-Convenience function to create and write a .lenv file from an object.
-
-```javascript
-import { writeLinoEnv } from 'lino-env';
-
-writeLinoEnv('.lenv', {
-  API_KEY: 'test_key',
-  SECRET: 'test_secret',
-});
-```
-
-Returns: `LinoEnv`
-
-## Usage Examples
-
-### Basic Usage
-
-```javascript
-import { LinoEnv } from 'lino-env';
-
-// Create and write
-const env = new LinoEnv('.lenv');
-env.set('GITHUB_TOKEN', 'gh_test123');
-env.set('TELEGRAM_TOKEN', '054test456');
-env.write();
-
-// Read
-const env2 = new LinoEnv('.lenv');
-env2.read();
-console.log(env2.get('GITHUB_TOKEN')); // 'gh_test123'
-```
-
-### Working with Duplicates
-
-```javascript
-import { LinoEnv } from 'lino-env';
-
-const env = new LinoEnv('.lenv');
-
-// Add multiple instances of the same key
-env.add('SERVER', 'server1.example.com');
-env.add('SERVER', 'server2.example.com');
-env.add('SERVER', 'server3.example.com');
-
-// Get the last one
-console.log(env.get('SERVER')); // 'server3.example.com'
-
-// Get all instances
-console.log(env.getAll('SERVER'));
-// ['server1.example.com', 'server2.example.com', 'server3.example.com']
-
-env.write(); // Persist to file
-```
-
-### Method Chaining
-
-```javascript
-import { LinoEnv } from 'lino-env';
-
-new LinoEnv('.lenv').set('API_KEY', 'abc123').set('SECRET', 'xyz789').write();
-```
-
-### Handling Special Characters
-
-The library correctly handles values with colons, spaces, and other special characters:
-
-```javascript
-env.set('URL', 'https://example.com:8080');
-env.set('MESSAGE', 'Hello World');
-env.write();
-
-const env2 = readLinoEnv('.lenv');
-console.log(env2.get('URL')); // 'https://example.com:8080'
-console.log(env2.get('MESSAGE')); // 'Hello World'
-```
+For full API documentation, see the [Rust README](./rust/README.md).
 
 ## File Format
 
@@ -367,6 +123,55 @@ SERVER: server2.example.com
 # Values with special characters
 URL: https://example.com:8080
 MESSAGE: Hello World
+```
+
+## Repository Structure
+
+```
+lino-env/
+├── js/                 # JavaScript package
+│   ├── src/            # Source code
+│   ├── tests/          # Tests
+│   ├── .changeset/     # Changeset configuration
+│   ├── package.json    # Package manifest
+│   └── ...
+├── rust/               # Rust package
+│   ├── src/            # Source code
+│   ├── tests/          # Tests (integration)
+│   ├── changelog.d/    # Changelog fragments
+│   ├── Cargo.toml      # Package manifest
+│   └── ...
+├── scripts/            # Shared scripts
+└── .github/workflows/  # CI/CD workflows
+    ├── js.yml          # JavaScript CI/CD
+    └── rust.yml        # Rust CI/CD
+```
+
+## Development
+
+### Prerequisites
+
+- Node.js 20.x for JavaScript development
+- Rust 1.70+ for Rust development
+
+### Running Tests
+
+```bash
+# JavaScript tests
+cd js && npm test
+
+# Rust tests
+cd rust && cargo test
+```
+
+### Linting and Formatting
+
+```bash
+# JavaScript
+cd js && npm run lint && npm run format:check
+
+# Rust
+cd rust && cargo fmt --check && cargo clippy
 ```
 
 ## License

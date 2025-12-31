@@ -142,3 +142,13 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Rust
+rust/target/
+rust/Cargo.lock
+*.rs.bk
+*.rlib
+*.rmeta
+*.so
+*.dylib
+*.dll

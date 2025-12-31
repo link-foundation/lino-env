@@ -23,7 +23,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/link-foundation/lino-env.git"
+    "url": "git+https://github.com/link-foundation/lino-env.git",
+    "directory": "js"
   },
   "bugs": {
     "url": "https://github.com/link-foundation/lino-env/issues"
