@@ -36,6 +36,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
+  CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
 
 defaults:
   run:
@@ -283,15 +284,57 @@ jobs:
         if: steps.check.outputs.should_release == 'true'
         run: cargo build --release
 
+      - name: Publish to Crates.io
+        if: steps.check.outputs.should_release == 'true'
+        id: publish-crate
+        run: |
+          PACKAGE_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+          PACKAGE_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "Package: $PACKAGE_NAME@$PACKAGE_VERSION"
+
+          echo "=== Attempting to publish to crates.io ==="
+
+          # Try to publish and capture the result
+          set +e  # Don't exit on error
+          cargo publish --token ${{ secrets.CARGO_TOKEN }} --allow-dirty 2>&1 | tee publish_output.txt
+          PUBLISH_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
+            echo "✅ Successfully published $PACKAGE_NAME@$PACKAGE_VERSION to crates.io"
+            echo "publish_result=success" >> $GITHUB_OUTPUT
+          elif grep -q "already uploaded" publish_output.txt || grep -q "already exists" publish_output.txt; then
+            echo "ℹ️ Version $PACKAGE_VERSION already exists on crates.io - this is OK"
+            echo "publish_result=already_exists" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to publish for unknown reason"
+            cat publish_output.txt
+            echo "publish_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Report crates.io publish status
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          if [ "${{ steps.publish-crate.outputs.publish_result }}" = "success" ]; then
+            echo "✅ Package was successfully published to crates.io"
+          elif [ "${{ steps.publish-crate.outputs.publish_result }}" = "already_exists" ]; then
+            echo "ℹ️ Package version already exists on crates.io - no action needed"
+          else
+            echo "❌ Publishing to crates.io failed - please check the logs"
+          fi
+
       - name: Create GitHub Release
         if: steps.check.outputs.should_release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PACKAGE_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
           node scripts/create-github-release.mjs \
             --release-version "${{ steps.current_version.outputs.version }}" \
             --repository "${{ github.repository }}" \
-            --tag-prefix "rust-v"
+            --tag-prefix "rust-v" \
+            --crates-io-url "https://crates.io/crates/$PACKAGE_NAME"
 
   # === MANUAL RELEASE ===
   manual-release:
@@ -341,12 +384,54 @@ jobs:
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         run: cargo build --release
 
+      - name: Publish to Crates.io
+        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        id: publish-crate
+        run: |
+          PACKAGE_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+          PACKAGE_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "Package: $PACKAGE_NAME@$PACKAGE_VERSION"
+
+          echo "=== Attempting to publish to crates.io ==="
+
+          # Try to publish and capture the result
+          set +e  # Don't exit on error
+          cargo publish --token ${{ secrets.CARGO_TOKEN }} --allow-dirty 2>&1 | tee publish_output.txt
+          PUBLISH_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
+            echo "✅ Successfully published $PACKAGE_NAME@$PACKAGE_VERSION to crates.io"
+            echo "publish_result=success" >> $GITHUB_OUTPUT
+          elif grep -q "already uploaded" publish_output.txt || grep -q "already exists" publish_output.txt; then
+            echo "ℹ️ Version $PACKAGE_VERSION already exists on crates.io - this is OK"
+            echo "publish_result=already_exists" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to publish for unknown reason"
+            cat publish_output.txt
+            echo "publish_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Report crates.io publish status
+        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        run: |
+          if [ "${{ steps.publish-crate.outputs.publish_result }}" = "success" ]; then
+            echo "✅ Package was successfully published to crates.io"
+          elif [ "${{ steps.publish-crate.outputs.publish_result }}" = "already_exists" ]; then
+            echo "ℹ️ Package version already exists on crates.io - no action needed"
+          else
+            echo "❌ Publishing to crates.io failed - please check the logs"
+          fi
+
       - name: Create GitHub Release
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PACKAGE_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
           node scripts/create-github-release.mjs \
             --release-version "${{ steps.version.outputs.new_version }}" \
             --repository "${{ github.repository }}" \
-            --tag-prefix "rust-v"
+            --tag-prefix "rust-v" \
+            --crates-io-url "https://crates.io/crates/$PACKAGE_NAME"
