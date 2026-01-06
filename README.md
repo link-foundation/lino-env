@@ -176,11 +176,14 @@ cd rust && cargo fmt --check && cargo clippy
 
 ### CI/CD Configuration
 
-The repository uses GitHub Actions for automated testing and publishing. Maintainers need to configure the following secrets:
+The repository uses GitHub Actions for automated testing and publishing.
+
+**JavaScript Package:** Uses [NPM trusted publishing](https://docs.npmjs.com/generating-provenance-statements) with OIDC tokens - no manual token configuration needed.
+
+**Rust Package:** Requires maintainers to configure the `CARGO_TOKEN` secret:
 
 | Secret | Purpose | How to Obtain |
 | ------ | ------- | ------------- |
-| `NPM_TOKEN` | Publishing JavaScript package to npm | [npm access tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens) |
 | `CARGO_TOKEN` | Publishing Rust package to crates.io | [crates.io API tokens](https://crates.io/settings/tokens) |
 
 Both packages are automatically published when changes are merged to the `main` branch, if the version has been bumped.
