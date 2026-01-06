@@ -178,7 +178,7 @@ cd rust && cargo fmt --check && cargo clippy
 
 The repository uses GitHub Actions for automated testing and publishing.
 
-**JavaScript Package:** Uses [NPM trusted publishing](https://docs.npmjs.com/generating-provenance-statements) with OIDC tokens - no manual token configuration needed.
+**JavaScript Package:** Uses [NPM trusted publishing](https://docs.npmjs.com/trusted-publishers), which leverages OpenID Connect (OIDC) to enable secure publishing without long-lived tokens. This is configured on npmjs.com by adding the GitHub repository as a trusted publisher, and requires `id-token: write` permission in the workflow. No manual token configuration is needed in the repository.
 
 **Rust Package:** Requires maintainers to configure the `CARGO_TOKEN` secret:
 
