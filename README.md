@@ -25,7 +25,7 @@ The key difference is the use of `: ` separator, which aligns with [links-notati
 | Package            | Language   | Directory | Status                                                                                  |
 | ------------------ | ---------- | --------- | --------------------------------------------------------------------------------------- |
 | [lino-env](./js)   | JavaScript | `./js`    | [![npm](https://img.shields.io/npm/v/lino-env)](https://www.npmjs.com/package/lino-env) |
-| [lino-env](./rust) | Rust       | `./rust`  | Coming soon                                                                             |
+| [lino-env](./rust) | Rust       | `./rust`  | [![crates.io](https://img.shields.io/crates/v/lino-env)](https://crates.io/crates/lino-env) |
 
 ## JavaScript Package
 
@@ -173,6 +173,20 @@ cd js && npm run lint && npm run format:check
 # Rust
 cd rust && cargo fmt --check && cargo clippy
 ```
+
+### CI/CD Configuration
+
+The repository uses GitHub Actions for automated testing and publishing.
+
+**JavaScript Package:** Uses [NPM trusted publishing](https://docs.npmjs.com/trusted-publishers), which leverages OpenID Connect (OIDC) to enable secure publishing without long-lived tokens. This is configured on npmjs.com by adding the GitHub repository as a trusted publisher, and requires `id-token: write` permission in the workflow. No manual token configuration is needed in the repository.
+
+**Rust Package:** Requires maintainers to configure the `CARGO_TOKEN` secret:
+
+| Secret | Purpose | How to Obtain |
+| ------ | ------- | ------------- |
+| `CARGO_TOKEN` | Publishing Rust package to crates.io | [crates.io API tokens](https://crates.io/settings/tokens) |
+
+Both packages are automatically published when changes are merged to the `main` branch, if the version has been bumped.
 
 ## License
 
