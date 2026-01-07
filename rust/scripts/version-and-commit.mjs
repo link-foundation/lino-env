@@ -59,9 +59,8 @@ function setOutput(key, value) {
   const outputFile = process.env.GITHUB_OUTPUT;
   if (outputFile) {
     appendFileSync(outputFile, `${key}=${value}\n`);
+    console.log(`Output: ${key}=${value}`);
   }
-  // Also log for visibility
-  console.log(`::set-output name=${key}::${value}`);
 }
 
 /**
