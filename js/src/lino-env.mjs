@@ -13,7 +13,7 @@ export class LinoEnv {
 
   /**
    * Read and parse the .lenv file
-   * Stores all instances of each key (duplicates are allowed)
+   * If a key appears multiple times, the last value wins (rewrite semantics)
    */
   read() {
     try {
@@ -36,11 +36,8 @@ export class LinoEnv {
         const key = line.substring(0, separatorIndex).trim();
         const value = line.substring(separatorIndex + 2); // Don't trim the value to preserve spaces
 
-        // Store all instances of the key
-        if (!this.data.has(key)) {
-          this.data.set(key, []);
-        }
-        this.data.get(key).push(value);
+        // Last value wins (rewrite semantics)
+        this.data.set(key, value);
       }
 
       return this;
@@ -52,48 +49,21 @@ export class LinoEnv {
   }
 
   /**
-   * Get the last instance of a reference (key)
+   * Get the value of a reference (key)
    * @param {string} reference - The key to look up
-   * @returns {string|undefined} The last value associated with the key
+   * @returns {string|undefined} The value associated with the key
    */
   get(reference) {
-    const values = this.data.get(reference);
-    if (!values || values.length === 0) {
-      return undefined;
-    }
-    return values[values.length - 1]; // Return last instance
+    return this.data.get(reference);
   }
 
   /**
-   * Get all instances of a reference (key)
-   * @param {string} reference - The key to look up
-   * @returns {string[]} All values associated with the key
-   */
-  getAll(reference) {
-    return this.data.get(reference) || [];
-  }
-
-  /**
-   * Set all instances of a reference to a new value
-   * Replaces all existing instances with a single new value
+   * Set a reference to a value
    * @param {string} reference - The key to set
    * @param {string} value - The new value
    */
   set(reference, value) {
-    this.data.set(reference, [value]);
-    return this;
-  }
-
-  /**
-   * Add a new instance of a reference (allows duplicates)
-   * @param {string} reference - The key to add
-   * @param {string} value - The value to add
-   */
-  add(reference, value) {
-    if (!this.data.has(reference)) {
-      this.data.set(reference, []);
-    }
-    this.data.get(reference).push(value);
+    this.data.set(reference, value);
     return this;
   }
 
@@ -103,10 +73,8 @@ export class LinoEnv {
   write() {
     const lines = [];
 
-    for (const [key, values] of this.data.entries()) {
-      for (const value of values) {
-        lines.push(`${key}: ${value}`);
-      }
+    for (const [key, value] of this.data.entries()) {
+      lines.push(`${key}: ${value}`);
     }
 
     writeFileSync(this.filePath, `${lines.join('\n')}\n`, 'utf-8');
@@ -119,11 +87,11 @@ export class LinoEnv {
    * @returns {boolean}
    */
   has(reference) {
-    return this.data.has(reference) && this.data.get(reference).length > 0;
+    return this.data.has(reference);
   }
 
   /**
-   * Delete all instances of a reference
+   * Delete a reference
    * @param {string} reference - The key to delete
    */
   delete(reference) {
@@ -140,13 +108,13 @@ export class LinoEnv {
   }
 
   /**
-   * Get all entries as an object (with last instance of each key)
+   * Get all entries as an object
    * @returns {Object}
    */
   toObject() {
     const obj = {};
-    for (const [key, values] of this.data.entries()) {
-      obj[key] = values[values.length - 1]; // Use last instance
+    for (const [key, value] of this.data.entries()) {
+      obj[key] = value;
     }
     return obj;
   }

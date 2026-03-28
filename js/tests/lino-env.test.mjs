@@ -1,6 +1,6 @@
 import { test, assert } from 'test-anywhere';
 import { LinoEnv, readLinoEnv, writeLinoEnv } from '../src/lino-env.mjs';
-import { unlinkSync, existsSync } from 'node:fs';
+import { unlinkSync, existsSync, writeFileSync } from 'node:fs';
 
 const TEST_FILE = '.test.lenv';
 
@@ -40,17 +40,6 @@ test('should read a .lenv file', () => {
 });
 
 // get() method
-test('should get the last instance of a reference', () => {
-  cleanup();
-  const env = new LinoEnv(TEST_FILE);
-  env.add('API_KEY', 'value1');
-  env.add('API_KEY', 'value2');
-  env.add('API_KEY', 'value3');
-
-  assert.equal(env.get('API_KEY'), 'value3');
-  cleanup();
-});
-
 test('should return undefined for non-existent reference', () => {
   cleanup();
   const env = new LinoEnv(TEST_FILE);
@@ -58,48 +47,36 @@ test('should return undefined for non-existent reference', () => {
   cleanup();
 });
 
-// getAll() method
-test('should get all instances of a reference', () => {
-  cleanup();
-  const env = new LinoEnv(TEST_FILE);
-  env.add('API_KEY', 'value1');
-  env.add('API_KEY', 'value2');
-  env.add('API_KEY', 'value3');
-
-  const all = env.getAll('API_KEY');
-  assert.deepEqual(all, ['value1', 'value2', 'value3']);
-  cleanup();
-});
-
-test('should return empty array for non-existent reference', () => {
-  cleanup();
-  const env = new LinoEnv(TEST_FILE);
-  assert.deepEqual(env.getAll('NON_EXISTENT'), []);
-  cleanup();
-});
-
 // set() method
-test('should set all instances of a reference to a new value', () => {
+test('should set a reference to a value', () => {
   cleanup();
   const env = new LinoEnv(TEST_FILE);
-  env.add('API_KEY', 'value1');
-  env.add('API_KEY', 'value2');
   env.set('API_KEY', 'new_value');
 
   assert.equal(env.get('API_KEY'), 'new_value');
-  assert.deepEqual(env.getAll('API_KEY'), ['new_value']);
   cleanup();
 });
 
-// add() method
-test('should add duplicate instances', () => {
+// Duplicate keys: last value wins (rewrite semantics)
+test('should use last value when duplicate keys exist in file', () => {
+  cleanup();
+  // Write a file with duplicate keys manually
+  writeFileSync(TEST_FILE, 'A: value1\nA: value2\n', 'utf-8');
+
+  const env = new LinoEnv(TEST_FILE);
+  env.read();
+
+  assert.equal(env.get('A'), 'value2');
+  cleanup();
+});
+
+test('should overwrite when setting same key twice', () => {
   cleanup();
   const env = new LinoEnv(TEST_FILE);
-  env.add('KEY', 'value1');
-  env.add('KEY', 'value2');
-  env.add('KEY', 'value3');
+  env.set('KEY', 'value1');
+  env.set('KEY', 'value2');
 
-  assert.deepEqual(env.getAll('KEY'), ['value1', 'value2', 'value3']);
+  assert.equal(env.get('KEY'), 'value2');
   cleanup();
 });
 
@@ -121,11 +98,10 @@ test('should return false for non-existent reference', () => {
 });
 
 // delete() method
-test('should delete all instances of a reference', () => {
+test('should delete a reference', () => {
   cleanup();
   const env = new LinoEnv(TEST_FILE);
-  env.add('KEY', 'value1');
-  env.add('KEY', 'value2');
+  env.set('KEY', 'value1');
   env.delete('KEY');
 
   assert.equal(env.has('KEY'), false);
@@ -150,35 +126,31 @@ test('should return all keys', () => {
 });
 
 // toObject() method
-test('should convert to object with last instance of each key', () => {
+test('should convert to object', () => {
   cleanup();
   const env = new LinoEnv(TEST_FILE);
-  env.add('KEY1', 'value1a');
-  env.add('KEY1', 'value1b');
+  env.set('KEY1', 'value1');
   env.set('KEY2', 'value2');
 
   const obj = env.toObject();
   assert.deepEqual(obj, {
-    KEY1: 'value1b',
+    KEY1: 'value1',
     KEY2: 'value2',
   });
   cleanup();
 });
 
 // Persistence
-test('should persist duplicates across write/read', () => {
+test('should persist values across write/read', () => {
   cleanup();
   const env1 = new LinoEnv(TEST_FILE);
-  env1.add('KEY', 'value1');
-  env1.add('KEY', 'value2');
-  env1.add('KEY', 'value3');
+  env1.set('KEY', 'value');
   env1.write();
 
   const env2 = new LinoEnv(TEST_FILE);
   env2.read();
 
-  assert.deepEqual(env2.getAll('KEY'), ['value1', 'value2', 'value3']);
-  assert.equal(env2.get('KEY'), 'value3');
+  assert.equal(env2.get('KEY'), 'value');
   cleanup();
 });
 
@@ -277,5 +249,20 @@ test('should handle empty values', () => {
 
   const env2 = readLinoEnv(TEST_FILE);
   assert.equal(env2.get('EMPTY_KEY'), '');
+  cleanup();
+});
+
+// Write does not produce duplicate lines
+test('should write one line per key', () => {
+  cleanup();
+  const env = new LinoEnv(TEST_FILE);
+  env.set('KEY', 'value1');
+  env.set('KEY', 'value2');
+  env.write();
+
+  const env2 = new LinoEnv(TEST_FILE);
+  env2.read();
+  assert.equal(env2.get('KEY'), 'value2');
+  assert.equal(env2.keys().length, 1);
   cleanup();
 });

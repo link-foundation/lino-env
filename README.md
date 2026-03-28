@@ -1,6 +1,6 @@
 # lino-env
 
-A library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation and supports duplicate keys.
+A library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation.
 
 **Available in both JavaScript and Rust!**
 
@@ -18,7 +18,7 @@ GITHUB_TOKEN: gh_...
 API_KEY: abc123
 ```
 
-The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. Additionally, .lenv files support duplicate keys, where multiple instances of the same key can exist.
+The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. If a key appears multiple times, the last value wins (rewrite semantics).
 
 ## Packages
 
@@ -106,7 +106,7 @@ For full API documentation, see the [Rust README](./rust/README.md).
 - Key-value separator: `: ` (colon followed by space)
 - One key-value pair per line
 - Empty lines and lines starting with `#` are ignored
-- Duplicate keys are allowed
+- If a key appears multiple times, the last value wins (rewrite semantics)
 - Values can contain spaces, colons, and other special characters
 
 Example `.lenv` file:
@@ -115,10 +115,6 @@ Example `.lenv` file:
 # Configuration file
 GITHUB_TOKEN: gh_abc123xyz
 TELEGRAM_TOKEN: 054test456
-
-# Multiple servers
-SERVER: server1.example.com
-SERVER: server2.example.com
 
 # Values with special characters
 URL: https://example.com:8080

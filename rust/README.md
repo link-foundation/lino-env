@@ -6,6 +6,8 @@ A Rust library to read and write `.lenv` files.
 
 `.lenv` files are environment configuration files that use `: ` (colon-space) instead of `=` for key-value separation. This format is part of the links-notation specification.
 
+If a key appears multiple times, the last value wins (rewrite semantics).
+
 Example `.lenv` file:
 
 ```
@@ -20,7 +22,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lino-env = "0.1"
+lino-env = "0.2"
 ```
 
 ## Usage
@@ -46,28 +48,6 @@ if let Some(token) = env.get("GITHUB_TOKEN") {
 }
 ```
 
-### Multiple Values per Key
-
-`.lenv` files support multiple values for the same key:
-
-```rust
-use lino_env::LinoEnv;
-
-let mut env = LinoEnv::new(".lenv");
-
-// Add multiple values for the same key
-env.add("ALLOWED_HOST", "localhost");
-env.add("ALLOWED_HOST", "example.com");
-env.add("ALLOWED_HOST", "api.example.com");
-
-// Get the last value
-assert_eq!(env.get("ALLOWED_HOST"), Some("api.example.com".to_string()));
-
-// Get all values
-let hosts = env.get_all("ALLOWED_HOST");
-assert_eq!(hosts, vec!["localhost", "example.com", "api.example.com"]);
-```
-
 ### Convenience Functions
 
 ```rust
@@ -90,16 +70,14 @@ println!("{:?}", env.get("KEY1"));
 ### LinoEnv
 
 - `new(file_path)` - Create a new LinoEnv instance
-- `read()` - Read and parse the .lenv file
+- `read()` - Read and parse the .lenv file (last value wins for duplicate keys)
 - `write()` - Write the current data to the file
-- `get(key)` - Get the last value for a key
-- `get_all(key)` - Get all values for a key
-- `set(key, value)` - Set a key to a single value (replaces all)
-- `add(key, value)` - Add a value to a key (allows duplicates)
+- `get(key)` - Get the value for a key
+- `set(key, value)` - Set a key to a value (overwrites if exists)
 - `has(key)` - Check if a key exists
-- `delete(key)` - Delete all values for a key
+- `delete(key)` - Delete a key
 - `keys()` - Get all keys
-- `to_hash_map()` - Convert to HashMap with last values
+- `to_hash_map()` - Convert to HashMap
 
 ## License
 
