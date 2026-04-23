@@ -1,5 +1,11 @@
 # lino-env
 
+## 1.0.1
+
+### Patch Changes
+
+- b46742f: Support multi-line quoted values with double-quote and single-quote delimiters.
+
 ## 1.0.0
 
 ### Major Changes
