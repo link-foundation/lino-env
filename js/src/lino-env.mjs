@@ -1,5 +1,39 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
+function readMultilineQuotedValue(lines, startIndex, value) {
+  const openingQuoteMatch = value.match(/^\s*(['"])/);
+  if (!openingQuoteMatch) {
+    return null;
+  }
+
+  const quote = openingQuoteMatch[1];
+  const openingQuoteIndex = openingQuoteMatch[0].length - 1;
+  const firstPart = value.substring(openingQuoteIndex + 1);
+
+  // Preserve existing single-line quoted value behavior.
+  if (firstPart.includes(quote)) {
+    return null;
+  }
+
+  const parts = [firstPart];
+  for (let lineIndex = startIndex + 1; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const closingQuoteIndex = line.indexOf(quote);
+
+    if (closingQuoteIndex !== -1) {
+      parts.push(line.substring(0, closingQuoteIndex));
+      return {
+        value: parts.join('\n'),
+        nextLineIndex: lineIndex,
+      };
+    }
+
+    parts.push(line);
+  }
+
+  return null;
+}
+
 /**
  * LinoEnv - A library to read and write .lenv files
  * .lenv files use `: ` instead of `=` for key-value separation
@@ -21,7 +55,8 @@ export class LinoEnv {
       this.data.clear();
 
       const lines = content.split('\n');
-      for (const line of lines) {
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
         // Skip completely empty lines
         if (line.trim() === '' || line.trim().startsWith('#')) {
           continue;
@@ -34,7 +69,17 @@ export class LinoEnv {
         }
 
         const key = line.substring(0, separatorIndex).trim();
-        const value = line.substring(separatorIndex + 2); // Don't trim the value to preserve spaces
+        let value = line.substring(separatorIndex + 2); // Don't trim the value to preserve spaces
+        const multilineQuotedValue = readMultilineQuotedValue(
+          lines,
+          lineIndex,
+          value
+        );
+
+        if (multilineQuotedValue) {
+          value = multilineQuotedValue.value;
+          lineIndex = multilineQuotedValue.nextLineIndex;
+        }
 
         // Last value wins (rewrite semantics)
         this.data.set(key, value);
