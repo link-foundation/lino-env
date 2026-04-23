@@ -2,6 +2,8 @@
 //!
 //! `.lenv` files use `: ` instead of `=` for key-value separation.
 //! Example: `GITHUB_TOKEN: gh_....`
+//!
+//! If a key appears multiple times in a file, the last value wins (rewrite semantics).
 
 use std::collections::HashMap;
 use std::fs;
@@ -41,7 +43,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Debug, Clone)]
 pub struct LinoEnv {
     file_path: String,
-    data: HashMap<String, Vec<String>>,
+    data: HashMap<String, String>,
 }
 
 impl LinoEnv {
@@ -67,7 +69,7 @@ impl LinoEnv {
 
     /// Read and parse the .lenv file.
     ///
-    /// Stores all instances of each key (duplicates are allowed).
+    /// If a key appears multiple times, the last value wins (rewrite semantics).
     ///
     /// # Errors
     ///
@@ -106,14 +108,15 @@ impl LinoEnv {
                 let key = line[..separator_index].trim().to_string();
                 let value = line[separator_index + 2..].to_string(); // Don't trim value to preserve spaces
 
-                self.data.entry(key).or_default().push(value);
+                // Last value wins (rewrite semantics)
+                self.data.insert(key, value);
             }
         }
 
         Ok(self)
     }
 
-    /// Get the last instance of a reference (key).
+    /// Get the value of a reference (key).
     ///
     /// # Arguments
     ///
@@ -121,7 +124,7 @@ impl LinoEnv {
     ///
     /// # Returns
     ///
-    /// The last value associated with the key, or None if not found.
+    /// The value associated with the key, or None if not found.
     ///
     /// # Examples
     ///
@@ -134,38 +137,10 @@ impl LinoEnv {
     /// ```
     #[must_use]
     pub fn get(&self, reference: &str) -> Option<String> {
-        self.data
-            .get(reference)
-            .and_then(|values| values.last().cloned())
+        self.data.get(reference).cloned()
     }
 
-    /// Get all instances of a reference (key).
-    ///
-    /// # Arguments
-    ///
-    /// * `reference` - The key to look up
-    ///
-    /// # Returns
-    ///
-    /// All values associated with the key, or an empty vector if not found.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use lino_env::LinoEnv;
-    /// let mut env = LinoEnv::new(".lenv");
-    /// env.add("KEY", "value1");
-    /// env.add("KEY", "value2");
-    /// assert_eq!(env.get_all("KEY"), vec!["value1", "value2"]);
-    /// ```
-    #[must_use]
-    pub fn get_all(&self, reference: &str) -> Vec<String> {
-        self.data.get(reference).cloned().unwrap_or_default()
-    }
-
-    /// Set all instances of a reference to a new value.
-    ///
-    /// Replaces all existing instances with a single new value.
+    /// Set a reference to a value.
     ///
     /// # Arguments
     ///
@@ -177,38 +152,11 @@ impl LinoEnv {
     /// ```
     /// use lino_env::LinoEnv;
     /// let mut env = LinoEnv::new(".lenv");
-    /// env.add("KEY", "old1");
-    /// env.add("KEY", "old2");
-    /// env.set("KEY", "new_value");
-    /// assert_eq!(env.get_all("KEY"), vec!["new_value"]);
+    /// env.set("KEY", "value");
+    /// assert_eq!(env.get("KEY"), Some("value".to_string()));
     /// ```
     pub fn set(&mut self, reference: &str, value: &str) -> &mut Self {
-        self.data
-            .insert(reference.to_string(), vec![value.to_string()]);
-        self
-    }
-
-    /// Add a new instance of a reference (allows duplicates).
-    ///
-    /// # Arguments
-    ///
-    /// * `reference` - The key to add
-    /// * `value` - The value to add
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use lino_env::LinoEnv;
-    /// let mut env = LinoEnv::new(".lenv");
-    /// env.add("KEY", "value1");
-    /// env.add("KEY", "value2");
-    /// assert_eq!(env.get_all("KEY"), vec!["value1", "value2"]);
-    /// ```
-    pub fn add(&mut self, reference: &str, value: &str) -> &mut Self {
-        self.data
-            .entry(reference.to_string())
-            .or_default()
-            .push(value.to_string());
+        self.data.insert(reference.to_string(), value.to_string());
         self
     }
 
@@ -236,10 +184,8 @@ impl LinoEnv {
     pub fn write(&self) -> io::Result<&Self> {
         let mut file = fs::File::create(&self.file_path)?;
 
-        for (key, values) in &self.data {
-            for value in values {
-                writeln!(file, "{key}: {value}")?;
-            }
+        for (key, value) in &self.data {
+            writeln!(file, "{key}: {value}")?;
         }
 
         Ok(self)
@@ -253,7 +199,7 @@ impl LinoEnv {
     ///
     /// # Returns
     ///
-    /// `true` if the key exists and has at least one value.
+    /// `true` if the key exists.
     ///
     /// # Examples
     ///
@@ -266,12 +212,10 @@ impl LinoEnv {
     /// ```
     #[must_use]
     pub fn has(&self, reference: &str) -> bool {
-        self.data
-            .get(reference)
-            .is_some_and(|values| !values.is_empty())
+        self.data.contains_key(reference)
     }
 
-    /// Delete all instances of a reference.
+    /// Delete a reference.
     ///
     /// # Arguments
     ///
@@ -313,32 +257,25 @@ impl LinoEnv {
         self.data.keys().cloned().collect()
     }
 
-    /// Get all entries as a `HashMap` (with last instance of each key).
+    /// Get all entries as a `HashMap`.
     ///
     /// # Returns
     ///
-    /// A `HashMap` with each key mapped to its last value.
+    /// A `HashMap` with each key mapped to its value.
     ///
     /// # Examples
     ///
     /// ```
     /// use lino_env::LinoEnv;
     /// let mut env = LinoEnv::new(".lenv");
-    /// env.add("KEY1", "value1a");
-    /// env.add("KEY1", "value1b");
+    /// env.set("KEY1", "value1");
     /// env.set("KEY2", "value2");
     /// let obj = env.to_hash_map();
-    /// assert_eq!(obj.get("KEY1"), Some(&"value1b".to_string()));
+    /// assert_eq!(obj.get("KEY1"), Some(&"value1".to_string()));
     /// ```
     #[must_use]
     pub fn to_hash_map(&self) -> HashMap<String, String> {
-        let mut result = HashMap::new();
-        for (key, values) in &self.data {
-            if let Some(last_value) = values.last() {
-                result.insert(key.clone(), last_value.clone());
-            }
-        }
-        result
+        self.data.clone()
     }
 }
 
@@ -461,15 +398,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_get_last_instance() {
-            let test_file = test_file("get_last_instance");
+        fn test_get_value() {
+            let test_file = test_file("get_value");
             cleanup(&test_file);
             let mut env = LinoEnv::new(&test_file);
-            env.add("API_KEY", "value1");
-            env.add("API_KEY", "value2");
-            env.add("API_KEY", "value3");
+            env.set("API_KEY", "value1");
 
-            assert_eq!(env.get("API_KEY"), Some("value3".to_string()));
+            assert_eq!(env.get("API_KEY"), Some("value1".to_string()));
             cleanup(&test_file);
         }
 
@@ -481,61 +416,36 @@ mod tests {
         }
     }
 
-    mod get_all_tests {
-        use super::*;
-
-        #[test]
-        fn test_get_all_instances() {
-            let test_file = test_file("get_all_instances");
-            cleanup(&test_file);
-            let mut env = LinoEnv::new(&test_file);
-            env.add("API_KEY", "value1");
-            env.add("API_KEY", "value2");
-            env.add("API_KEY", "value3");
-
-            assert_eq!(env.get_all("API_KEY"), vec!["value1", "value2", "value3"]);
-            cleanup(&test_file);
-        }
-
-        #[test]
-        fn test_get_all_nonexistent() {
-            let test_file = test_file("get_all_nonexistent");
-            let env = LinoEnv::new(&test_file);
-            assert!(env.get_all("NON_EXISTENT").is_empty());
-        }
-    }
-
     mod set_tests {
         use super::*;
 
         #[test]
-        fn test_set_replaces_all() {
-            let test_file = test_file("set_replaces_all");
+        fn test_set_overwrites() {
+            let test_file = test_file("set_overwrites");
             cleanup(&test_file);
             let mut env = LinoEnv::new(&test_file);
-            env.add("API_KEY", "value1");
-            env.add("API_KEY", "value2");
+            env.set("API_KEY", "value1");
             env.set("API_KEY", "new_value");
 
             assert_eq!(env.get("API_KEY"), Some("new_value".to_string()));
-            assert_eq!(env.get_all("API_KEY"), vec!["new_value"]);
             cleanup(&test_file);
         }
     }
 
-    mod add_tests {
+    mod duplicate_key_tests {
         use super::*;
 
         #[test]
-        fn test_add_duplicates() {
-            let test_file = test_file("add_duplicates");
+        fn test_duplicate_keys_last_value_wins() {
+            let test_file = test_file("duplicate_keys");
             cleanup(&test_file);
-            let mut env = LinoEnv::new(&test_file);
-            env.add("KEY", "value1");
-            env.add("KEY", "value2");
-            env.add("KEY", "value3");
+            // Write a file with duplicate keys manually
+            fs::write(&test_file, "A: value1\nA: value2\n").unwrap();
 
-            assert_eq!(env.get_all("KEY"), vec!["value1", "value2", "value3"]);
+            let mut env = LinoEnv::new(&test_file);
+            env.read().unwrap();
+
+            assert_eq!(env.get("A"), Some("value2".to_string()));
             cleanup(&test_file);
         }
     }
@@ -566,12 +476,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_delete_all_instances() {
-            let test_file = test_file("delete_all_instances");
+        fn test_delete() {
+            let test_file = test_file("delete");
             cleanup(&test_file);
             let mut env = LinoEnv::new(&test_file);
-            env.add("KEY", "value1");
-            env.add("KEY", "value2");
+            env.set("KEY", "value1");
             env.delete("KEY");
 
             assert!(!env.has("KEY"));
@@ -609,12 +518,11 @@ mod tests {
             let test_file = test_file("to_hash_map");
             cleanup(&test_file);
             let mut env = LinoEnv::new(&test_file);
-            env.add("KEY1", "value1a");
-            env.add("KEY1", "value1b");
+            env.set("KEY1", "value1");
             env.set("KEY2", "value2");
 
             let obj = env.to_hash_map();
-            assert_eq!(obj.get("KEY1"), Some(&"value1b".to_string()));
+            assert_eq!(obj.get("KEY1"), Some(&"value1".to_string()));
             assert_eq!(obj.get("KEY2"), Some(&"value2".to_string()));
             cleanup(&test_file);
         }
@@ -624,20 +532,17 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_persist_duplicates() {
-            let test_file = test_file("persist_duplicates");
+        fn test_persist_values() {
+            let test_file = test_file("persist_values");
             cleanup(&test_file);
             let mut env1 = LinoEnv::new(&test_file);
-            env1.add("KEY", "value1");
-            env1.add("KEY", "value2");
-            env1.add("KEY", "value3");
+            env1.set("KEY", "value");
             env1.write().unwrap();
 
             let mut env2 = LinoEnv::new(&test_file);
             env2.read().unwrap();
 
-            assert_eq!(env2.get_all("KEY"), vec!["value1", "value2", "value3"]);
-            assert_eq!(env2.get("KEY"), Some("value3".to_string()));
+            assert_eq!(env2.get("KEY"), Some("value".to_string()));
             cleanup(&test_file);
         }
     }

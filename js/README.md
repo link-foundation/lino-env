@@ -1,6 +1,6 @@
 # lino-env (JavaScript)
 
-A JavaScript library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation and supports duplicate keys.
+A JavaScript library to operate .lenv files - an alternative to .env files that uses `: ` (colon-space) instead of `=` for key-value separation.
 
 ## What are .lenv files?
 
@@ -16,7 +16,7 @@ GITHUB_TOKEN: gh_...
 API_KEY: abc123
 ```
 
-The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. Additionally, .lenv files support duplicate keys, where multiple instances of the same key can exist.
+The key difference is the use of `: ` separator, which aligns with [links-notation](https://github.com/link-foundation/links-notation) format. If a key appears multiple times, the last value wins (rewrite semantics).
 
 ## Installation
 
@@ -127,7 +127,7 @@ const env = new LinoEnv('.lenv');
 
 ##### `read()`
 
-Reads and parses the .lenv file. If the file doesn't exist, initializes with empty data.
+Reads and parses the .lenv file. If the file doesn't exist, initializes with empty data. If a key appears multiple times, the last value wins.
 
 ```javascript
 const env = new LinoEnv('.lenv');
@@ -148,45 +148,21 @@ Returns: `this` (for method chaining)
 
 ##### `get(reference)`
 
-Gets the last instance of a reference (key).
+Gets the value of a reference (key).
 
 ```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2');
-console.log(env.get('API_KEY')); // 'value2'
+env.set('API_KEY', 'value');
+console.log(env.get('API_KEY')); // 'value'
 ```
 
 Returns: `string | undefined`
 
-##### `getAll(reference)`
-
-Gets all instances of a reference (key).
-
-```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2');
-console.log(env.getAll('API_KEY')); // ['value1', 'value2']
-```
-
-Returns: `string[]`
-
 ##### `set(reference, value)`
 
-Sets a reference to a single value, replacing all existing instances.
+Sets a reference to a value. If the key already exists, the value is overwritten.
 
 ```javascript
 env.set('API_KEY', 'new_value');
-```
-
-Returns: `this` (for method chaining)
-
-##### `add(reference, value)`
-
-Adds a new instance of a reference, allowing duplicates.
-
-```javascript
-env.add('API_KEY', 'value1');
-env.add('API_KEY', 'value2'); // Now there are 2 instances
 ```
 
 Returns: `this` (for method chaining)
@@ -205,7 +181,7 @@ Returns: `boolean`
 
 ##### `delete(reference)`
 
-Deletes all instances of a reference.
+Deletes a reference.
 
 ```javascript
 env.delete('API_KEY');
@@ -225,15 +201,14 @@ Returns: `string[]`
 
 ##### `toObject()`
 
-Converts to a plain object with the last instance of each key.
+Converts to a plain object.
 
 ```javascript
-env.add('KEY1', 'value1a');
-env.add('KEY1', 'value1b');
+env.set('KEY1', 'value1');
 env.set('KEY2', 'value2');
 
 console.log(env.toObject());
-// { KEY1: 'value1b', KEY2: 'value2' }
+// { KEY1: 'value1', KEY2: 'value2' }
 ```
 
 Returns: `Object`
@@ -275,7 +250,7 @@ Returns: `LinoEnv`
 - Key-value separator: `: ` (colon followed by space)
 - One key-value pair per line
 - Empty lines and lines starting with `#` are ignored
-- Duplicate keys are allowed
+- If a key appears multiple times, the last value wins (rewrite semantics)
 - Values can contain spaces, colons, and other special characters
 
 Example `.lenv` file:
@@ -284,10 +259,6 @@ Example `.lenv` file:
 # Configuration file
 GITHUB_TOKEN: gh_abc123xyz
 TELEGRAM_TOKEN: 054test456
-
-# Multiple servers
-SERVER: server1.example.com
-SERVER: server2.example.com
 
 # Values with special characters
 URL: https://example.com:8080
