@@ -7,11 +7,42 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, Write};
 use std::path::Path;
 
 /// Package version (matches Cargo.toml version).
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn read_multiline_quoted_value(
+    lines: &[&str],
+    start_index: usize,
+    value: &str,
+) -> Option<(String, usize)> {
+    let trimmed_value = value.trim_start();
+    let quote = trimmed_value.chars().next()?;
+    if !matches!(quote, '"' | '\'') {
+        return None;
+    }
+
+    let first_part = &trimmed_value[quote.len_utf8()..];
+
+    // Preserve existing single-line quoted value behavior.
+    if first_part.contains(quote) {
+        return None;
+    }
+
+    let mut parts = vec![first_part.to_string()];
+    for (line_index, line) in lines.iter().enumerate().skip(start_index + 1) {
+        if let Some(closing_quote_index) = line.find(quote) {
+            parts.push(line[..closing_quote_index].to_string());
+            return Some((parts.join("\n"), line_index));
+        }
+
+        parts.push((*line).to_string());
+    }
+
+    None
+}
 
 /// `LinoEnv` - A struct to read and write `.lenv` files.
 ///
@@ -91,26 +122,35 @@ impl LinoEnv {
             return Ok(self);
         }
 
-        let file = fs::File::open(path)?;
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line?;
+        let content = fs::read_to_string(path)?;
+        let lines: Vec<&str> = content.lines().collect();
+        let mut line_index = 0;
+        while line_index < lines.len() {
+            let line = lines[line_index];
             let trimmed = line.trim();
 
             // Skip empty lines and comments
             if trimmed.is_empty() || trimmed.starts_with('#') {
+                line_index += 1;
                 continue;
             }
 
             // Parse line with `: ` separator
             if let Some(separator_index) = line.find(": ") {
                 let key = line[..separator_index].trim().to_string();
-                let value = line[separator_index + 2..].to_string(); // Don't trim value to preserve spaces
+                let mut value = line[separator_index + 2..].to_string(); // Don't trim value to preserve spaces
+                if let Some((multiline_value, next_line_index)) =
+                    read_multiline_quoted_value(&lines, line_index, &value)
+                {
+                    value = multiline_value;
+                    line_index = next_line_index;
+                }
 
                 // Last value wins (rewrite semantics)
                 self.data.insert(key, value);
             }
+
+            line_index += 1;
         }
 
         Ok(self)
@@ -612,6 +652,49 @@ mod tests {
             let mut env2 = LinoEnv::new(&test_file_path);
             env2.read().unwrap();
             assert_eq!(env2.get("MESSAGE"), Some("Hello World".to_string()));
+            cleanup(&test_file_path);
+        }
+    }
+
+    mod multiline_quoted_value_tests {
+        use super::*;
+
+        #[test]
+        fn test_multi_line_double_quoted_values() {
+            let test_file_path = test_file("multiline_double_quoted");
+            cleanup(&test_file_path);
+            fs::write(
+                &test_file_path,
+                "HIVE_TELEGRAM_BOT_CONFIGURATION: \"\nTELEGRAM_BOT_TOKEN: 'xxx'\nTELEGRAM_ALLOWED_CHATS:\n  -1002975819706\nTELEGRAM_BOT_VERBOSE: true\n\"\nAFTER: value\n",
+            )
+            .unwrap();
+
+            let mut env = LinoEnv::new(&test_file_path);
+            env.read().unwrap();
+
+            assert_eq!(
+                env.get("HIVE_TELEGRAM_BOT_CONFIGURATION"),
+                Some(
+                    "\nTELEGRAM_BOT_TOKEN: 'xxx'\nTELEGRAM_ALLOWED_CHATS:\n  -1002975819706\nTELEGRAM_BOT_VERBOSE: true\n"
+                        .to_string()
+                )
+            );
+            assert_eq!(env.get("TELEGRAM_BOT_TOKEN"), None);
+            assert_eq!(env.get("AFTER"), Some("value".to_string()));
+            cleanup(&test_file_path);
+        }
+
+        #[test]
+        fn test_multi_line_single_quoted_values() {
+            let test_file_path = test_file("multiline_single_quoted");
+            cleanup(&test_file_path);
+            fs::write(&test_file_path, "SCRIPT: 'line1\nline2'\nAFTER: value\n").unwrap();
+
+            let mut env = LinoEnv::new(&test_file_path);
+            env.read().unwrap();
+
+            assert_eq!(env.get("SCRIPT"), Some("line1\nline2".to_string()));
+            assert_eq!(env.get("AFTER"), Some("value".to_string()));
             cleanup(&test_file_path);
         }
     }
