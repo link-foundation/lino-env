@@ -230,6 +230,50 @@ test('should handle values with spaces', () => {
   cleanup();
 });
 
+test('should handle multi-line double-quoted values', () => {
+  cleanup();
+  writeFileSync(
+    TEST_FILE,
+    `HIVE_TELEGRAM_BOT_CONFIGURATION: "
+TELEGRAM_BOT_TOKEN: 'xxx'
+TELEGRAM_ALLOWED_CHATS:
+  -1002975819706
+TELEGRAM_BOT_VERBOSE: true
+"
+AFTER: value
+`,
+    'utf-8'
+  );
+
+  const env = readLinoEnv(TEST_FILE);
+
+  assert.equal(
+    env.get('HIVE_TELEGRAM_BOT_CONFIGURATION'),
+    "\nTELEGRAM_BOT_TOKEN: 'xxx'\nTELEGRAM_ALLOWED_CHATS:\n  -1002975819706\nTELEGRAM_BOT_VERBOSE: true\n"
+  );
+  assert.equal(env.get('TELEGRAM_BOT_TOKEN'), undefined);
+  assert.equal(env.get('AFTER'), 'value');
+  cleanup();
+});
+
+test('should handle multi-line single-quoted values', () => {
+  cleanup();
+  writeFileSync(
+    TEST_FILE,
+    `SCRIPT: 'line1
+line2'
+AFTER: value
+`,
+    'utf-8'
+  );
+
+  const env = readLinoEnv(TEST_FILE);
+
+  assert.equal(env.get('SCRIPT'), 'line1\nline2');
+  assert.equal(env.get('AFTER'), 'value');
+  cleanup();
+});
+
 // Edge cases
 test('should handle non-existent file on read', () => {
   cleanup();
