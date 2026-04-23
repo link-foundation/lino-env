@@ -1,5 +1,11 @@
 # lino-env
 
+## 1.0.0
+
+### Major Changes
+
+- 7c4dee0: Drop support for multiple values of the same variable name. Duplicate keys now use last-value-wins (rewrite semantics). Removed `getAll()` and `add()` methods. Internal data structure changed from `Map<string, string[]>` to `Map<string, string>`.
+
 ## 0.3.0
 
 ### Minor Changes
