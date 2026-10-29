@@ -8,12 +8,14 @@ on:
       - 'js/**'
       - 'scripts/detect-code-changes.mjs'
       - '.github/workflows/js.yml'
+      - 'experiments/verify-release-runtime.mjs'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'js/**'
       - 'scripts/detect-code-changes.mjs'
       - '.github/workflows/js.yml'
+      - 'experiments/verify-release-runtime.mjs'
   workflow_dispatch:
     inputs:
       release_mode:
@@ -92,11 +94,12 @@ jobs:
       - name: Check for changesets
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Skip changeset check for automated version PRs
-          if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
+          if [[ "$GITHUB_HEAD_REF" == "changeset-release/"* ]]; then
             echo "Skipping changeset check for automated release PR"
             exit 0
           fi
@@ -108,6 +111,7 @@ jobs:
   lint:
     name: Lint and Format Check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [detect-changes]
     if: |
       github.event_name == 'push' ||
@@ -115,17 +119,21 @@ jobs:
       needs.detect-changes.outputs.js-changed == 'true' ||
       needs.detect-changes.outputs.docs-changed == 'true' ||
       needs.detect-changes.outputs.package-changed == 'true' ||
-      needs.detect-changes.outputs.workflow-changed == 'true'
+      needs.detect-changes.outputs.workflow-changed == 'true' ||
+      github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Install dependencies
         run: npm install
+
+      - name: Verify release runtime dependencies
+        run: node ../experiments/verify-release-runtime.mjs
 
       - name: Run ESLint
         run: npm run lint
@@ -216,7 +224,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -272,7 +280,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -318,7 +326,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Install dependencies
         run: npm install
