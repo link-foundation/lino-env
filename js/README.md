@@ -24,6 +24,34 @@ The key difference is the use of `: ` separator, which aligns with [links-notati
 npm install lino-env
 ```
 
+### Links Notation compatibility
+
+The dependency range is `>=0.25.2 <0.28.0`; the lockfile uses 0.27.1, the latest
+release checked on 2026-10-29. This range lets a consumer using 0.25.2, 0.26.x or
+0.27.x share its parser installation with lino-env, without dependency overrides.
+Future 0.28+ releases require another compatibility assessment.
+
+The current [Links Notation API](https://github.com/link-foundation/links-notation/tree/main/js)
+exports `Parser` and `Link`; `new Parser().parse(text)` returns links with `id`,
+`values`, `toString()` and `equals()`. Tests verify LF/CRLF parsing and
+parse/format/parse roundtrips. Packed consumer tests install lino-env beside
+0.25.2, 0.26.0 and 0.27.1 and check that npm installs one shared parser copy.
+
+Lino-env's `.lenv` reader uses its own `: ` parsing logic, so the dependency
+upgrade requires no parser calls to migrate. Its whitespace, single-line quote,
+multiline quote and duplicate-key rules remain the ones described below. The
+dependency update addresses interoperability; the CRLF correction is in the
+`.lenv` reader itself.
+
+Run `npm test` for configuration and parser roundtrips, and `npm run test:consumer`
+for the packed installation checks (requires registry access). CI runs these
+consumer checks on Linux, macOS and Windows and the unit tests on Node.js, Bun
+and Deno. Locally, the other runtime commands are `bun test` and
+`deno test --allow-read --allow-write --allow-env` after `npm ci`. Deno uses
+[`nodeModulesDir: "manual"`](https://docs.deno.com/runtime/fundamentals/node/#manual-node_modules-creation)
+to read npm's resolved installation: its automatic
+bare-import resolution rejects the compound version range used here.
+
 ## Quick Start
 
 ```bash
@@ -252,6 +280,16 @@ Returns: `LinoEnv`
 - Empty lines and lines starting with `#` are ignored
 - If a key appears multiple times, the last value wins (rewrite semantics)
 - Values can contain spaces, colons, and other special characters
+
+Both LF and Windows CRLF line endings are accepted, including mixed files and
+files without a final newline. Only the CR in a CRLF delimiter is removed;
+leading/trailing spaces, tabs and literal carriage returns inside values are
+preserved. The writer uses LF line endings.
+
+Single-line quotes remain part of the value: `KEY: "value"` reads as `"value"`.
+A quote opened on one line and closed on a later line delimits a multiline
+string; those delimiters are removed, its line breaks become LF, and its spaces
+are preserved. Lines inside that string are not parsed as separate keys.
 
 Example `.lenv` file:
 

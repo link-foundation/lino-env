@@ -54,7 +54,8 @@ export class LinoEnv {
       const content = readFileSync(this.filePath, 'utf-8');
       this.data.clear();
 
-      const lines = content.split('\n');
+      // Treat CRLF as a line ending without trimming spaces or literal CRs.
+      const lines = content.split(/\r?\n/);
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         const line = lines[lineIndex];
         // Skip completely empty lines
