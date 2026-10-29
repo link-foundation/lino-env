@@ -8,6 +8,12 @@ A Rust library to read and write `.lenv` files.
 
 If a key appears multiple times, the last value wins (rewrite semantics).
 
+The reader accepts LF and Windows CRLF line endings, including mixed files and
+files without a final newline. Spaces, tabs and literal carriage returns within
+values are preserved. Single-line quotes remain part of the value; quotes that
+delimit a multiline string are removed and its line breaks become LF. The writer
+uses LF line endings.
+
 Example `.lenv` file:
 
 ```

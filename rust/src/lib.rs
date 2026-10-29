@@ -710,7 +710,7 @@ mod tests {
             env.read().unwrap();
 
             assert_eq!(env.get("ANY_KEY"), None);
-            assert!(env.keys().is_empty());
+            assert_eq!(env.keys(), Vec::<String>::new());
         }
 
         #[test]
