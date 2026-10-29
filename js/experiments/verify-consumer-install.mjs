@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import {
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -29,12 +30,16 @@ function npm(args, cwd) {
 }
 
 try {
-  const [packed] = JSON.parse(
-    npm(
-      ['pack', '--pack-destination', directory, '--json', '--ignore-scripts'],
-      packageRoot
-    )
+  npm(
+    ['pack', '--pack-destination', directory, '--json', '--ignore-scripts'],
+    packageRoot
   );
+  // npm 10 can run prepare despite --ignore-scripts, mixing hook output into
+  // --json stdout. Inspect the artifact instead of parsing that output.
+  const tarballs = readdirSync(directory).filter((name) =>
+    name.endsWith('.tgz')
+  );
+  assert.equal(tarballs.length, 1, 'Expected one packed library tarball');
 
   for (const version of ['0.25.2', '0.26.0', '0.27.1']) {
     const consumer = join(directory, version);
@@ -47,7 +52,7 @@ try {
         private: true,
         type: 'module',
         dependencies: {
-          'lino-env': `file:../${packed.filename}`,
+          'lino-env': `file:../${tarballs[0]}`,
           'links-notation': version,
         },
       })
