@@ -140,6 +140,7 @@ jobs:
   test:
     name: Test (${{ matrix.runtime }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     needs: [detect-changes, changeset-check]
     if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
     strategy:
@@ -190,7 +191,7 @@ jobs:
 
       - name: Run tests (Deno)
         if: matrix.runtime == 'deno'
-        run: deno test --allow-read --allow-write
+        run: deno test --allow-read --allow-write --allow-env
 
   # Release - only runs on main after tests pass (for push events)
   release:

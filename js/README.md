@@ -253,6 +253,16 @@ Returns: `LinoEnv`
 - If a key appears multiple times, the last value wins (rewrite semantics)
 - Values can contain spaces, colons, and other special characters
 
+Both LF and Windows CRLF line endings are accepted, including mixed files and
+files without a final newline. Only the CR in a CRLF delimiter is removed;
+leading/trailing spaces, tabs and literal carriage returns inside values are
+preserved. The writer uses LF line endings.
+
+Single-line quotes remain part of the value: `KEY: "value"` reads as `"value"`.
+A quote opened on one line and closed on a later line delimits a multiline
+string; those delimiters are removed, its line breaks become LF, and its spaces
+are preserved. Lines inside that string are not parsed as separate keys.
+
 Example `.lenv` file:
 
 ```
