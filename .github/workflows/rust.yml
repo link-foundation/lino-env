@@ -8,12 +8,16 @@ on:
       - 'rust/**'
       - 'scripts/detect-code-changes.mjs'
       - '.github/workflows/rust.yml'
+      - 'experiments/test-crates-publishing.mjs'
+      - 'experiments/verify-release-runtime.mjs'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'rust/**'
       - 'scripts/detect-code-changes.mjs'
       - '.github/workflows/rust.yml'
+      - 'experiments/test-crates-publishing.mjs'
+      - 'experiments/verify-release-runtime.mjs'
   workflow_dispatch:
     inputs:
       release_mode:
@@ -44,11 +48,13 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
+
 defaults:
   run:
     working-directory: rust
 
 jobs:
+  # === DETECT CHANGES - determines which jobs should run ===
   detect-changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -197,12 +203,31 @@ jobs:
       - name: Run doc tests
         run: cargo test --doc --verbose
 
+  # Exercise release-only code on PRs without publishing or committing versions.
+  release-checks:
+    name: Release Workflow Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup release Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+
+      - name: Test crates.io publish outcomes
+        run: node ../experiments/test-crates-publishing.mjs
+
+      - name: Verify release runtime dependencies
+        run: node ../experiments/verify-release-runtime.mjs
+
   # === BUILD ===
   build:
     name: Build Package
     runs-on: ubuntu-latest
-    needs: [lint, test]
-    if: always() && !cancelled() && needs.lint.result == 'success' && needs.test.result == 'success'
+    needs: [lint, test, release-checks]
+    if: always() && !cancelled() && needs.release-checks.result == 'success' && needs.lint.result == 'success' && needs.test.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -252,7 +277,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Configure git
         run: |
@@ -306,6 +331,7 @@ jobs:
         # Trusted publishing first; the publish step falls back to the token secret.
         continue-on-error: true
         if: steps.check.outputs.should_release == 'true'
+
       - name: Publish to Crates.io
         if: steps.check.outputs.should_release == 'true'
         id: publish-crate
@@ -319,7 +345,7 @@ jobs:
           # Try to publish and capture the result
           set +e  # Don't exit on error
           cargo publish --allow-dirty 2>&1 | tee publish_output.txt
-          PUBLISH_EXIT_CODE=$?
+          PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
           set -e  # Re-enable exit on error
 
           if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
@@ -337,6 +363,7 @@ jobs:
 
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.prm_auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+
       - name: Report crates.io publish status
         if: steps.check.outputs.should_release == 'true'
         run: |
@@ -387,7 +414,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Configure git
         run: |
@@ -421,6 +448,7 @@ jobs:
         # Trusted publishing first; the publish step falls back to the token secret.
         continue-on-error: true
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+
       - name: Publish to Crates.io
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish-crate
@@ -434,7 +462,7 @@ jobs:
           # Try to publish and capture the result
           set +e  # Don't exit on error
           cargo publish --allow-dirty 2>&1 | tee publish_output.txt
-          PUBLISH_EXIT_CODE=$?
+          PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
           set -e  # Re-enable exit on error
 
           if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
@@ -452,6 +480,7 @@ jobs:
 
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.prm_auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+
       - name: Report crates.io publish status
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         run: |
@@ -491,7 +520,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Create changelog fragment
         run: |

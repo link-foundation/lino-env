@@ -176,11 +176,18 @@ The repository uses GitHub Actions for automated testing and publishing.
 
 **JavaScript Package:** Uses [NPM trusted publishing](https://docs.npmjs.com/trusted-publishers), which leverages OpenID Connect (OIDC) to enable secure publishing without long-lived tokens. This is configured on npmjs.com by adding the GitHub repository as a trusted publisher, and requires `id-token: write` permission in the workflow. No manual token configuration is needed in the repository.
 
-**Rust Package:** Requires maintainers to configure the `CARGO_TOKEN` secret:
+**Rust Package:** Uses [crates.io trusted publishing](https://crates.io/docs/trusted-publishing) for automatic and manual instant releases. Register `link-foundation/lino-env` with the workflow filename `rust.yml` as a trusted publisher for the `lino-env` crate. These jobs do not use a GitHub environment, so leave that field unset. The publishing jobs request `id-token: write` and exchange the GitHub OIDC identity for a short-lived crates.io token.
+
+After this workflow is merged, the migration can be completed from the repository root with `package-registry-manager setup --registry crates-io --migrate --execute` to register the trusted publisher on crates.io. Publisher registration requires a crate owner's authenticated session.
+
+If trusted publishing is unavailable (including before registration), publishing falls back to `CARGO_REGISTRY_TOKEN`, then `CARGO_TOKEN`. Keep the existing secrets available as fallbacks. Tokens are passed through the publishing step's environment.
 
 | Secret | Purpose | How to Obtain |
 | ------ | ------- | ------------- |
-| `CARGO_TOKEN` | Publishing Rust package to crates.io | [crates.io API tokens](https://crates.io/settings/tokens) |
+| `CARGO_REGISTRY_TOKEN` | Preferred fallback for publishing the Rust package | [crates.io API tokens](https://crates.io/settings/tokens) |
+| `CARGO_TOKEN` | Legacy fallback for publishing the Rust package | [crates.io API tokens](https://crates.io/settings/tokens) |
+
+Release tooling for both packages runs on Node.js 24 because its dependencies require Node.js 22 or newer. JavaScript's library tests continue to run on Node.js 20, Bun and Deno. CI checks the release tool imports without publishing and tests Rust's publishing shell against successful uploads, existing versions, authentication errors and network failures.
 
 Both packages are automatically published when changes are merged to the `main` branch, if the version has been bumped.
 
